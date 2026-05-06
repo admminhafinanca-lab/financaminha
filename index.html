@@ -1738,32 +1738,12 @@
       const MEMBROS_DEFAULT = [{ id: 'm1', nome: 'Titular', tipo: 'adulto', idade: 30 }];
       let state = {
         membros: [...MEMBROS_DEFAULT],
-        rendas: [
-          { id: 'r1', nome: 'Salário', valor: 1800, dia: 5, membro: 'm1', tipo: 'fixo' },
-        ],
-        essenciais: [
-          { id: 'e1', nome: 'Aluguel', valor: 700, dia: 10, membro: 'm1', cat: 'moradia', fixo: true },
-          { id: 'e2', nome: 'Supermercado', valor: 400, dia: 15, membro: 'm1', cat: 'alimentacao', fixo: false },
-          { id: 'e3', nome: 'Água', valor: 60, dia: 10, membro: 'm1', cat: 'utilidades', fixo: true },
-          { id: 'e4', nome: 'Luz', valor: 90, dia: 15, membro: 'm1', cat: 'utilidades', fixo: true },
-          { id: 'e5', nome: 'Internet', valor: 100, dia: 10, membro: 'm1', cat: 'utilidades', fixo: true },
-        ],
-        naoEssenciais: [
-          { id: 'n1', nome: 'Combustível', valor: 200, dia: 20, membro: 'm1', cat: 'transporte', fixo: false },
-          { id: 'n2', nome: 'Streaming', valor: 50, dia: 1, membro: 'm1', cat: 'lazer', fixo: true },
-          { id: 'n3', nome: 'Beleza', valor: 80, dia: 20, membro: 'm1', cat: 'pessoal', fixo: false },
-          { id: 'n4', nome: 'Imprevistos', valor: 100, dia: 30, membro: 'm1', cat: 'outros', fixo: false },
-          { id: 'n5', nome: 'Cartão de crédito', valor: 200, dia: 20, membro: 'm1', cat: 'credito', fixo: false },
-        ],
-        cartoes: [
-          { id: 'c1', banco: 'Nubank', tipo: 'básico', bandeira: 'Mastercard', limite: 2000, fatura: 200, venc: 15, anuidade: 0, taxa: 15.99, parcelas: [] },
-        ],
-        dividas: [
-          { id: 'd1', nome: 'Empréstimo pessoal', total: 5000, juros: 5, minimo: 250, cat: 'pessoal', parcelas: 0 },
-        ],
-        investimentos: [
-          { id: 'i1', nome: 'Poupança', tipo: 'poupanca', valor: 500, aporte: 100, dataInicio: '2025-01-01', membro: 'm1' },
-        ],
+        rendas: [],
+        essenciais: [],
+        naoEssenciais: [],
+        cartoes: [],
+        dividas: [],
+        investimentos: [],
         emergAtual: 0,
         beneficios: { va: 0, vr: 0, vt: 0, vhome: 0, vsaude: 0, voutra: 0 },
       };
@@ -3064,7 +3044,7 @@
         inp.onchange = e => {
           const file = e.target.files[0]; if (!file) return;
           const reader = new FileReader();
-          reader.onload = async ev => {
+          reader.onload = ev => {
             try {
               const parsed = JSON.parse(ev.target.result);
               state = parsed; await persistSave();
