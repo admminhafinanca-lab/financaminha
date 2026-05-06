@@ -3581,7 +3581,7 @@
           });
           if (error) throw error;
           if (data.user && !data.session) {
-            setAuthMsg('✅ Conta criada! Verifique seu e-mail para confirmar.', false);
+            setAuthMsg('✅ Conta criada! Enviamos um link de confirmação para ' + email + '. Confirme o e-mail para acessar.', false);
           } else if (data.session) {
             await onAuthSuccess(data.user);
           }
@@ -3667,6 +3667,12 @@
 
       // ── Após login bem-sucedido ──
       async function onAuthSuccess(user) {
+        // Bloqueia acesso se e-mail não foi confirmado
+        if (!user.email_confirmed_at) {
+          await _sb.auth.signOut();
+          setAuthMsg('⚠️ Confirme seu e-mail antes de acessar. Verifique sua caixa de entrada.');
+          return;
+        }
         _currentUser = user;
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('app-wrapper').style.display = 'block';
@@ -3685,7 +3691,7 @@
       function traduzErroAuth(msg) {
         if (!msg) return 'Erro desconhecido.';
         if (msg.includes('Invalid login credentials')) return 'E-mail ou senha incorretos.';
-        if (msg.includes('Email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
+        if (msg.includes('Email not confirmed')) return '⚠️ E-mail ainda não confirmado. Verifique sua caixa de entrada e clique no link que enviamos.';
         if (msg.includes('User already registered')) return 'E-mail já cadastrado. Faça login.';
         if (msg.includes('Password should be')) return 'Senha muito fraca.';
         if (msg.includes('rate limit')) return 'Muitas tentativas. Aguarde alguns minutos.';
