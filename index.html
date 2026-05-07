@@ -165,6 +165,55 @@
     .ifield { display: flex; flex-direction: column; gap: 5px; }
     .ifield label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 
+    /* ── CALENDÁRIO DE METAS ── */
+    .meta-date-wrap { position: relative; }
+    .meta-cal {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      z-index: 600;
+      background: var(--s1);
+      border: 1px solid var(--b2);
+      border-radius: 12px;
+      padding: 14px;
+      width: 260px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      animation: calIn .15s ease;
+    }
+    @keyframes calIn { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:none } }
+    .meta-cal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .meta-cal-head span {
+      font-family: var(--ff); font-size: 14px; font-weight: 700; color: var(--text);
+    }
+    .meta-cal-nav {
+      background: var(--s2); border: 1px solid var(--b1); border-radius: 6px;
+      color: var(--muted); font-size: 14px; cursor: pointer; padding: 3px 8px;
+      transition: all .15s;
+    }
+    .meta-cal-nav:hover { background: var(--s3); color: var(--text); }
+    .meta-cal-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+    }
+    .meta-cal-month {
+      padding: 7px 4px; text-align: center; border-radius: 7px;
+      font-size: 12px; cursor: pointer; color: var(--muted);
+      border: 1px solid transparent;
+      transition: all .12s;
+    }
+    .meta-cal-month:hover { background: var(--s2); color: var(--text); border-color: var(--b1); }
+    .meta-cal-month.selected { background: rgba(200,255,87,.15); color: var(--acc); border-color: rgba(200,255,87,.3); font-weight: 600; }
+    .meta-cal-month.past { opacity: .35; cursor: default; }
+    .meta-cal-clear {
+      margin-top: 10px; width: 100%; padding: 6px; text-align: center;
+      background: none; border: 1px solid var(--b1); border-radius: 7px;
+      color: var(--muted); font-size: 12px; cursor: pointer; font-family: var(--fb);
+      transition: all .15s;
+    }
+    .meta-cal-clear:hover { border-color: var(--red); color: var(--red); }
+
     /* ── LAYOUT ── */
     .app {
       display: flex;
@@ -1745,9 +1794,13 @@
                 <label>Já guardei (R$)</label>
                 <input type="number" id="meta-atual" class="inp inp-full" placeholder="0" min="0" step="100">
               </div>
-              <div class="ifield">
+              <div class="ifield" style="position:relative">
                 <label>Prazo</label>
-                <input type="month" id="meta-prazo" class="inp inp-full">
+                <div class="meta-date-wrap" id="prazo-wrap">
+                  <input type="text" id="meta-prazo" class="inp inp-full" placeholder="Selecione o mês/ano" readonly onclick="toggleMetaCal('meta-prazo-cal','meta-prazo')" style="cursor:pointer;padding-right:32px">
+                  <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:14px;color:var(--muted)">📅</span>
+                  <div id="meta-prazo-cal" class="meta-cal" style="display:none"></div>
+                </div>
               </div>
             </div>
             <button class="add-btn" onclick="adicionarMeta()" style="margin-top:0">+ Criar meta</button>
@@ -1888,6 +1941,64 @@
     </div>
 
   </div><!-- /app-wrapper -->
+
+  <!-- ══ MODAL: EDITAR META ══ -->
+  <div id="meta-edit-modal" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:16px;">
+    <div style="background:var(--s1);border:1px solid var(--b2);border-radius:16px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;padding:2rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <div style="font-family:var(--ff);font-size:18px;font-weight:700;">✏️ Editar meta</div>
+        <button onclick="closeMetaEditModal()" style="background:none;border:1px solid var(--b1);border-radius:8px;padding:6px 12px;color:var(--muted);cursor:pointer;font-size:13px;">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="ifield" style="grid-column:1/-1">
+          <label>Nome da meta</label>
+          <input type="text" id="meta-edit-nome" class="inp inp-full" placeholder="Nome da meta">
+        </div>
+        <div class="ifield">
+          <label>Categoria</label>
+          <select id="meta-edit-cat" class="inp inp-full">
+            <option value="viagem">✈️ Viagem</option>
+            <option value="veiculo">🚗 Veículo</option>
+            <option value="imovel">🏠 Imóvel / Reforma</option>
+            <option value="educacao">🎓 Educação</option>
+            <option value="emergencia">🛡️ Reserva / Emergência</option>
+            <option value="eletronico">📱 Eletrônico / Eletrodoméstico</option>
+            <option value="saude">💊 Saúde</option>
+            <option value="investimento">📈 Investimento</option>
+            <option value="outro">🎯 Outro</option>
+          </select>
+        </div>
+        <div class="ifield">
+          <label>Prioridade</label>
+          <select id="meta-edit-prioridade" class="inp inp-full">
+            <option value="alta">🔴 Alta</option>
+            <option value="media">🟡 Média</option>
+            <option value="baixa">🟢 Baixa</option>
+          </select>
+        </div>
+        <div class="ifield">
+          <label>Valor da meta (R$)</label>
+          <input type="number" id="meta-edit-valor" class="inp inp-full" min="0" step="100">
+        </div>
+        <div class="ifield">
+          <label>Valor acumulado (R$)</label>
+          <input type="number" id="meta-edit-atual" class="inp inp-full" min="0" step="100">
+        </div>
+        <div class="ifield" style="grid-column:1/-1;position:relative">
+          <label>Prazo</label>
+          <div class="meta-date-wrap">
+            <input type="text" id="meta-edit-prazo" class="inp inp-full" placeholder="Selecione o mês/ano" readonly onclick="toggleMetaCal('meta-edit-prazo-cal','meta-edit-prazo')" style="cursor:pointer;padding-right:32px">
+            <span style="position:absolute;right:10px;bottom:9px;pointer-events:none;font-size:14px;color:var(--muted)">📅</span>
+            <div id="meta-edit-prazo-cal" class="meta-cal" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:1.25rem;">
+        <button onclick="saveMetaEdit()" style="flex:1;padding:10px;background:var(--acc);color:#09090d;border:none;border-radius:8px;font-size:14px;font-weight:600;font-family:var(--fb);cursor:pointer;">Salvar alterações</button>
+        <button onclick="closeMetaEditModal()" style="padding:10px 16px;background:none;border:1px solid var(--b1);border-radius:8px;color:var(--muted);font-size:14px;font-family:var(--fb);cursor:pointer;">Cancelar</button>
+      </div>
+    </div>
+  </div>
 
 <script>
       // ══════════════════════════════════════════
@@ -3716,7 +3827,7 @@
         const atual = parseFloat(document.getElementById('meta-atual').value) || 0;
         const cat = document.getElementById('meta-cat').value;
         const prioridade = document.getElementById('meta-prioridade').value;
-        const prazo = document.getElementById('meta-prazo').value;
+        const prazo = document.getElementById('meta-prazo').dataset.value || '';
 
         if (!nome) { showToast('⚠️ Dê um nome para a meta.', 'yellow'); return; }
         if (valor <= 0) { showToast('⚠️ Informe o valor da meta.', 'yellow'); return; }
@@ -3728,11 +3839,140 @@
         document.getElementById('meta-nome').value = '';
         document.getElementById('meta-valor').value = '';
         document.getElementById('meta-atual').value = '';
-        document.getElementById('meta-prazo').value = '';
+        const prazoEl = document.getElementById('meta-prazo');
+        prazoEl.value = ''; prazoEl.dataset.value = '';
 
         renderMetas();
         debounceAutoSave();
         showToast('✅ Meta criada!', 'green');
+      }
+
+      // ── CALENDÁRIO CUSTOMIZADO ──
+      const MESES_CAL = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+      function toggleMetaCal(calId, inputId) {
+        // Fecha qualquer outro calendário aberto
+        document.querySelectorAll('.meta-cal').forEach(c => { if (c.id !== calId) c.style.display = 'none'; });
+        const cal = document.getElementById(calId);
+        if (!cal) return;
+        if (cal.style.display === 'none' || !cal.style.display) {
+          renderMetaCal(calId, inputId);
+          cal.style.display = 'block';
+        } else {
+          cal.style.display = 'none';
+        }
+      }
+
+      function renderMetaCal(calId, inputId) {
+        const cal = document.getElementById(calId);
+        if (!cal) return;
+        const inp = document.getElementById(inputId);
+        const now = new Date();
+        const stored = inp.dataset.calYear ? parseInt(inp.dataset.calYear) : now.getFullYear();
+        const year = stored;
+        const selValue = inp.dataset.value || ''; // "YYYY-MM"
+        const [selY, selM] = selValue ? selValue.split('-').map(Number) : [0,0];
+
+        cal.innerHTML = `
+          <div class="meta-cal-head">
+            <button class="meta-cal-nav" onclick="metaCalYear('${calId}','${inputId}',-1)">‹</button>
+            <span>${year}</span>
+            <button class="meta-cal-nav" onclick="metaCalYear('${calId}','${inputId}',1)">›</button>
+          </div>
+          <div class="meta-cal-grid">
+            ${MESES_CAL.map((m, i) => {
+              const isPast = year < now.getFullYear() || (year === now.getFullYear() && i < now.getMonth());
+              const isSel = year === selY && (i+1) === selM;
+              return `<div class="meta-cal-month${isSel?' selected':''}${isPast?' past':''}"
+                onclick="${isPast?'':` pickMetaMonth('${calId}','${inputId}',${year},${i+1})`}">${m}</div>`;
+            }).join('')}
+          </div>
+          <button class="meta-cal-clear" onclick="clearMetaPrazo('${calId}','${inputId}')">Limpar data</button>`;
+      }
+
+      function metaCalYear(calId, inputId, delta) {
+        const inp = document.getElementById(inputId);
+        const now = new Date();
+        const cur = inp.dataset.calYear ? parseInt(inp.dataset.calYear) : now.getFullYear();
+        const next = cur + delta;
+        if (next < now.getFullYear()) return;
+        inp.dataset.calYear = next;
+        renderMetaCal(calId, inputId);
+      }
+
+      function pickMetaMonth(calId, inputId, year, month) {
+        const inp = document.getElementById(inputId);
+        const mm = String(month).padStart(2,'0');
+        inp.dataset.value = `${year}-${mm}`;
+        inp.value = `${MESES_CAL[month-1]}/${year}`;
+        document.getElementById(calId).style.display = 'none';
+        renderMetaCal(calId, inputId);
+      }
+
+      function clearMetaPrazo(calId, inputId) {
+        const inp = document.getElementById(inputId);
+        inp.dataset.value = '';
+        inp.value = '';
+        document.getElementById(calId).style.display = 'none';
+      }
+
+      // Fecha calendário ao clicar fora
+      document.addEventListener('click', e => {
+        if (!e.target.closest('.meta-date-wrap')) {
+          document.querySelectorAll('.meta-cal').forEach(c => c.style.display = 'none');
+        }
+      });
+
+      // ── EDITAR META ──
+      let _metaEditId = null;
+
+      function editarMeta(id) {
+        const m = state.metas.find(x => x.id === id);
+        if (!m) return;
+        _metaEditId = id;
+        document.getElementById('meta-edit-nome').value = m.nome;
+        document.getElementById('meta-edit-cat').value = m.cat;
+        document.getElementById('meta-edit-prioridade').value = m.prioridade;
+        document.getElementById('meta-edit-valor').value = m.valor;
+        document.getElementById('meta-edit-atual').value = m.atual;
+        const editPrazo = document.getElementById('meta-edit-prazo');
+        editPrazo.dataset.value = m.prazo || '';
+        editPrazo.dataset.calYear = '';
+        if (m.prazo) {
+          const [y, mo] = m.prazo.split('-').map(Number);
+          editPrazo.value = `${MESES_CAL[mo-1]}/${y}`;
+        } else {
+          editPrazo.value = '';
+        }
+        document.getElementById('meta-edit-modal').style.display = 'flex';
+      }
+
+      function closeMetaEditModal() {
+        document.getElementById('meta-edit-modal').style.display = 'none';
+        _metaEditId = null;
+        // Fecha calendários dentro do modal
+        document.querySelectorAll('.meta-cal').forEach(c => c.style.display = 'none');
+      }
+
+      function saveMetaEdit() {
+        if (!_metaEditId) return;
+        const m = state.metas.find(x => x.id === _metaEditId);
+        if (!m) return;
+        const nome = document.getElementById('meta-edit-nome').value.trim();
+        const valor = parseFloat(document.getElementById('meta-edit-valor').value) || 0;
+        const atual = parseFloat(document.getElementById('meta-edit-atual').value) || 0;
+        if (!nome) { showToast('⚠️ Dê um nome para a meta.', 'yellow'); return; }
+        if (valor <= 0) { showToast('⚠️ Informe o valor da meta.', 'yellow'); return; }
+        m.nome = nome;
+        m.cat = document.getElementById('meta-edit-cat').value;
+        m.prioridade = document.getElementById('meta-edit-prioridade').value;
+        m.valor = valor;
+        m.atual = Math.min(atual, valor);
+        m.prazo = document.getElementById('meta-edit-prazo').dataset.value || '';
+        closeMetaEditModal();
+        renderMetas();
+        debounceAutoSave();
+        showToast('✅ Meta atualizada!', 'green');
       }
 
       function aportarMeta(id) {
@@ -3876,8 +4116,10 @@
               <span style="font-size:12px;color:var(--dim);flex-shrink:0">R$</span>
               <input type="number" id="aporte-${m.id}" class="meta-aporte-inp" placeholder="0" min="1" step="50">
               <button class="meta-btn-aporte" onclick="aportarMeta('${m.id}')">+ Adicionar</button>
+              <button class="meta-btn-rm" onclick="editarMeta('${m.id}')" style="border-color:rgba(96,165,250,.3);color:var(--blue)">✏️ editar</button>
               <button class="meta-btn-rm" onclick="removerMeta('${m.id}')">remover</button>
             </div>` : `<div style="display:flex;gap:6px;margin-top:10px">
+              <button class="meta-btn-rm" onclick="editarMeta('${m.id}')" style="border-color:rgba(96,165,250,.3);color:var(--blue)">✏️ editar</button>
               <button class="meta-btn-rm" onclick="removerMeta('${m.id}')">remover</button>
             </div>`}
           </div>`;
