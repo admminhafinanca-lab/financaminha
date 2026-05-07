@@ -171,7 +171,7 @@
       position: absolute;
       top: calc(100% + 6px);
       left: 0;
-      z-index: 600;
+      z-index: 900;
       background: var(--s1);
       border: 1px solid var(--b2);
       border-radius: 12px;
@@ -3858,6 +3858,30 @@
         if (cal.style.display === 'none' || !cal.style.display) {
           renderMetaCal(calId, inputId);
           cal.style.display = 'block';
+          // Posiciona o calendário para não ficar cortado
+          const inp = document.getElementById(inputId);
+          const rect = inp.getBoundingClientRect();
+          const spaceBelow = window.innerHeight - rect.bottom;
+          // Se está dentro de um modal usa position fixed
+          const inModal = inp.closest('[id$="-modal"]');
+          if (inModal) {
+            cal.style.position = 'fixed';
+            cal.style.left = rect.left + 'px';
+            cal.style.width = Math.max(260, rect.width) + 'px';
+            if (spaceBelow >= 280) {
+              cal.style.top = (rect.bottom + 4) + 'px';
+              cal.style.bottom = 'auto';
+            } else {
+              cal.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+              cal.style.top = 'auto';
+            }
+          } else {
+            cal.style.position = 'absolute';
+            cal.style.top = '';
+            cal.style.bottom = '';
+            cal.style.left = '';
+            cal.style.width = '';
+          }
         } else {
           cal.style.display = 'none';
         }
@@ -3868,8 +3892,8 @@
         if (!cal) return;
         const inp = document.getElementById(inputId);
         const now = new Date();
-        const stored = inp.dataset.calYear ? parseInt(inp.dataset.calYear) : now.getFullYear();
-        const year = stored;
+        const storedYear = inp.dataset.calYear;
+        const year = (storedYear && !isNaN(parseInt(storedYear))) ? parseInt(storedYear) : now.getFullYear();
         const selValue = inp.dataset.value || ''; // "YYYY-MM"
         const [selY, selM] = selValue ? selValue.split('-').map(Number) : [0,0];
 
@@ -3893,10 +3917,11 @@
       function metaCalYear(calId, inputId, delta) {
         const inp = document.getElementById(inputId);
         const now = new Date();
-        const cur = inp.dataset.calYear ? parseInt(inp.dataset.calYear) : now.getFullYear();
+        const storedYear = inp.dataset.calYear;
+        const cur = (storedYear && !isNaN(parseInt(storedYear))) ? parseInt(storedYear) : now.getFullYear();
         const next = cur + delta;
         if (next < now.getFullYear()) return;
-        inp.dataset.calYear = next;
+        inp.dataset.calYear = String(next);
         renderMetaCal(calId, inputId);
       }
 
@@ -3937,7 +3962,7 @@
         document.getElementById('meta-edit-atual').value = m.atual;
         const editPrazo = document.getElementById('meta-edit-prazo');
         editPrazo.dataset.value = m.prazo || '';
-        editPrazo.dataset.calYear = '';
+        delete editPrazo.dataset.calYear;
         if (m.prazo) {
           const [y, mo] = m.prazo.split('-').map(Number);
           editPrazo.value = `${MESES_CAL[mo-1]}/${y}`;
