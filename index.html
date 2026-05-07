@@ -94,6 +94,77 @@
       border-radius: 99px;
     }
 
+    /* ── METAS ── */
+    .meta-card {
+      background: var(--s1);
+      border: 1px solid var(--b1);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      transition: border-color .2s, box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .meta-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--meta-color, var(--acc));
+    }
+    .meta-card:hover { border-color: var(--b2); box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+    .meta-card.concluida { border-color: rgba(74,222,128,.25); }
+    .meta-card.concluida::before { background: var(--green); }
+    .meta-icon {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      background: var(--meta-bg, rgba(200,255,87,.12));
+      flex-shrink: 0;
+    }
+    .meta-nome { font-family: var(--ff); font-size: 16px; font-weight: 700; color: var(--text); }
+    .meta-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .meta-val-box { background: var(--s2); border-radius: 8px; padding: 9px 12px; }
+    .meta-val-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+    .meta-val-num { font-family: var(--ff); font-size: 15px; font-weight: 700; }
+    .meta-prog-bar { background: var(--s3); border-radius: 99px; height: 10px; overflow: hidden; margin-bottom: 10px; }
+    .meta-prog-fill {
+      height: 100%; border-radius: 99px;
+      background: var(--meta-color, var(--acc));
+      transition: width .7s cubic-bezier(.4,0,.2,1);
+      position: relative; overflow: hidden;
+    }
+    .meta-prog-fill::after {
+      content: '';
+      position: absolute; top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.2), transparent);
+      animation: mshimmer 2s infinite;
+    }
+    @keyframes mshimmer { 0% { left:-100% } 100% { left:200% } }
+    .meta-aporte-inp {
+      flex: 1; min-width: 80px; max-width: 140px;
+      padding: 5px 9px; background: var(--s3); border: 1px solid var(--b1);
+      border-radius: 7px; color: var(--text); font-size: 13px; font-family: var(--fb);
+    }
+    .meta-aporte-inp:focus { outline: none; border-color: var(--acc); }
+    .meta-btn-aporte {
+      padding: 5px 12px; background: rgba(200,255,87,.12);
+      border: 1px solid rgba(200,255,87,.25); border-radius: 7px;
+      color: var(--acc); font-size: 12px; font-family: var(--fb); font-weight: 500; cursor: pointer;
+      transition: background .15s;
+    }
+    .meta-btn-aporte:hover { background: rgba(200,255,87,.2); }
+    .meta-btn-rm {
+      padding: 5px 10px; background: none; border: 1px solid var(--b1);
+      border-radius: 7px; color: var(--muted); font-size: 12px; font-family: var(--fb); cursor: pointer;
+      transition: all .15s;
+    }
+    .meta-btn-rm:hover { border-color: var(--red); color: var(--red); }
+    .ifield { display: flex; flex-direction: column; gap: 5px; }
+    .ifield label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
     /* ── LAYOUT ── */
     .app {
       display: flex;
@@ -1272,6 +1343,7 @@
           emergência</button>
         <button class="nav-btn" onclick="nav('plano',this)"><span class="nav-icon">📅</span>Plano quitação</button>
         <button class="nav-btn" onclick="nav('projecao',this)"><span class="nav-icon">🔮</span>Projeção mensal</button>
+        <button class="nav-btn" onclick="nav('metas',this)"><span class="nav-icon">🏆</span>Metas financeiras</button>
 
         <button class="nav-btn" onclick="doLogout()" style="color:var(--red);margin-top:.5rem;"><span
             class="nav-icon">🚪</span>Sair da conta</button>
@@ -1623,6 +1695,74 @@
           <div id="meses-plano"></div>
         </div>
 
+        <!-- ════════ METAS FINANCEIRAS ════════ -->
+        <div class="page" id="page-metas">
+          <div class="page-head">
+            <div class="page-title">Metas financeiras</div>
+            <div class="page-sub">Defina objetivos e acompanhe seu progresso visual</div>
+          </div>
+
+          <!-- Resumo de metas -->
+          <div class="g4 mb2" id="metas-resumo"></div>
+
+          <!-- Formulário nova meta -->
+          <div class="card mb2" id="card-nova-meta">
+            <div class="card-title">➕ Nova meta</div>
+            <div class="if-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+              <div class="ifield">
+                <label>Nome da meta</label>
+                <input type="text" id="meta-nome" class="inp inp-full" placeholder="Ex: Viagem, Carro…">
+              </div>
+              <div class="ifield">
+                <label>Categoria</label>
+                <select id="meta-cat" class="inp inp-full">
+                  <option value="viagem">✈️ Viagem</option>
+                  <option value="veiculo">🚗 Veículo</option>
+                  <option value="imovel">🏠 Imóvel / Reforma</option>
+                  <option value="educacao">🎓 Educação</option>
+                  <option value="emergencia">🛡️ Reserva / Emergência</option>
+                  <option value="eletronico">📱 Eletrônico / Eletrodoméstico</option>
+                  <option value="saude">💊 Saúde</option>
+                  <option value="investimento">📈 Investimento</option>
+                  <option value="outro">🎯 Outro</option>
+                </select>
+              </div>
+              <div class="ifield">
+                <label>Prioridade</label>
+                <select id="meta-prioridade" class="inp inp-full">
+                  <option value="alta">🔴 Alta</option>
+                  <option value="media" selected>🟡 Média</option>
+                  <option value="baixa">🟢 Baixa</option>
+                </select>
+              </div>
+            </div>
+            <div class="if-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+              <div class="ifield">
+                <label>Valor da meta (R$)</label>
+                <input type="number" id="meta-valor" class="inp inp-full" placeholder="0" min="0" step="100">
+              </div>
+              <div class="ifield">
+                <label>Já guardei (R$)</label>
+                <input type="number" id="meta-atual" class="inp inp-full" placeholder="0" min="0" step="100">
+              </div>
+              <div class="ifield">
+                <label>Prazo</label>
+                <input type="month" id="meta-prazo" class="inp inp-full">
+              </div>
+            </div>
+            <button class="add-btn" onclick="adicionarMeta()" style="margin-top:0">+ Criar meta</button>
+          </div>
+
+          <!-- Lista de metas -->
+          <div id="lista-metas"></div>
+
+          <!-- Gráfico comparativo -->
+          <div class="card mt1" id="card-chart-metas" style="display:none">
+            <div class="card-title">Comparativo de metas</div>
+            <div class="chart-wrap-lg"><canvas id="chart-metas"></canvas></div>
+          </div>
+        </div>
+
         <!-- ════════ PROJEÇÃO MENSAL ════════ -->
         <div class="page" id="page-projecao">
           <div class="page-head">
@@ -1766,6 +1906,7 @@
         investimentos: [],
         emergAtual: 0,
         beneficios: { va: 0, vr: 0, vt: 0, vhome: 0, vsaude: 0, voutra: 0 },
+        metas: [],
       };
 
       let charts = {};
@@ -3532,6 +3673,266 @@
 
 
       // ══════════════════════════════════════════
+      //  🏆 METAS FINANCEIRAS
+      // ══════════════════════════════════════════
+
+      const META_CATS = {
+        viagem:      { icon: '✈️', color: 'var(--blue)',   bg: 'rgba(96,165,250,.12)'  },
+        veiculo:     { icon: '🚗', color: 'var(--orange)', bg: 'rgba(251,146,60,.12)'  },
+        imovel:      { icon: '🏠', color: 'var(--yellow)', bg: 'rgba(251,191,36,.12)'  },
+        educacao:    { icon: '🎓', color: 'var(--purple)', bg: 'rgba(167,139,250,.12)' },
+        emergencia:  { icon: '🛡️', color: 'var(--cyan)',   bg: 'rgba(34,211,238,.12)'  },
+        eletronico:  { icon: '📱', color: 'var(--pink)',   bg: 'rgba(244,114,182,.12)' },
+        saude:       { icon: '💊', color: 'var(--red)',    bg: 'rgba(248,113,113,.12)' },
+        investimento:{ icon: '📈', color: 'var(--green)',  bg: 'rgba(74,222,128,.12)'  },
+        outro:       { icon: '🎯', color: 'var(--acc)',    bg: 'rgba(200,255,87,.12)'  },
+      };
+
+      const META_PRIO = {
+        alta:  { label: 'Alta',  cls: 'b-red'    },
+        media: { label: 'Média', cls: 'b-yellow' },
+        baixa: { label: 'Baixa', cls: 'b-green'  },
+      };
+
+      function fmtMes(ym) {
+        if (!ym) return '—';
+        const [y, m] = ym.split('-');
+        const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        return meses[parseInt(m)-1] + '/' + y;
+      }
+
+      function mesesRestantes(prazo) {
+        if (!prazo) return null;
+        const hoje = new Date();
+        const [y, m] = prazo.split('-').map(Number);
+        const alvo = new Date(y, m-1, 1);
+        const diff = (alvo.getFullYear() - hoje.getFullYear()) * 12 + (alvo.getMonth() - hoje.getMonth());
+        return diff;
+      }
+
+      function adicionarMeta() {
+        const nome = document.getElementById('meta-nome').value.trim();
+        const valor = parseFloat(document.getElementById('meta-valor').value) || 0;
+        const atual = parseFloat(document.getElementById('meta-atual').value) || 0;
+        const cat = document.getElementById('meta-cat').value;
+        const prioridade = document.getElementById('meta-prioridade').value;
+        const prazo = document.getElementById('meta-prazo').value;
+
+        if (!nome) { showToast('⚠️ Dê um nome para a meta.', 'yellow'); return; }
+        if (valor <= 0) { showToast('⚠️ Informe o valor da meta.', 'yellow'); return; }
+
+        const meta = { id: uid('mt'), nome, valor, atual: Math.min(atual, valor), cat, prioridade, prazo, criadaEm: new Date().toISOString() };
+        state.metas.push(meta);
+
+        // Limpa formulário
+        document.getElementById('meta-nome').value = '';
+        document.getElementById('meta-valor').value = '';
+        document.getElementById('meta-atual').value = '';
+        document.getElementById('meta-prazo').value = '';
+
+        renderMetas();
+        debounceAutoSave();
+        showToast('✅ Meta criada!', 'green');
+      }
+
+      function aportarMeta(id) {
+        const meta = state.metas.find(m => m.id === id);
+        if (!meta) return;
+        const inp = document.getElementById('aporte-' + id);
+        const val = parseFloat(inp?.value) || 0;
+        if (val <= 0) { showToast('⚠️ Informe o valor do aporte.', 'yellow'); return; }
+        meta.atual = Math.min(meta.atual + val, meta.valor);
+        if (inp) inp.value = '';
+        renderMetas();
+        debounceAutoSave();
+        if (meta.atual >= meta.valor) {
+          showToast('🏆 Meta "' + meta.nome + '" concluída! Parabéns!', 'green');
+        } else {
+          showToast('💰 Aporte de ' + fmt(val) + ' registrado!', 'green');
+        }
+      }
+
+      function removerMeta(id) {
+        openConfirmModal('Remover meta', 'Tem certeza que deseja remover esta meta?', () => {
+          state.metas = state.metas.filter(m => m.id !== id);
+          renderMetas();
+          debounceAutoSave();
+          showToast('🗑️ Meta removida.', 'red');
+        });
+      }
+
+      function renderMetasResumo() {
+        const el = document.getElementById('metas-resumo');
+        if (!el) return;
+        const total = state.metas.length;
+        const concluidas = state.metas.filter(m => m.atual >= m.valor).length;
+        const totalMeta = state.metas.reduce((s, m) => s + m.valor, 0);
+        const totalAtual = state.metas.reduce((s, m) => s + m.atual, 0);
+        const pct = totalMeta > 0 ? Math.round(totalAtual / totalMeta * 100) : 0;
+
+        el.innerHTML = [
+          { label: 'Metas criadas', val: total, sub: `${concluidas} concluída${concluidas!==1?'s':''}`, cor: 'var(--acc)' },
+          { label: 'Total a poupar', val: fmt(totalMeta), sub: 'soma de todas as metas', cor: 'var(--blue)' },
+          { label: 'Total acumulado', val: fmt(totalAtual), sub: `${pct}% do objetivo total`, cor: 'var(--green)' },
+          { label: 'Falta poupar', val: fmt(Math.max(0, totalMeta - totalAtual)), sub: 'para completar tudo', cor: totalMeta > totalAtual ? 'var(--yellow)' : 'var(--green)' },
+        ].map(c => `
+          <div class="metric" style="--mc:${c.cor}">
+            <div class="metric-label">${c.label}</div>
+            <div class="metric-value" style="color:${c.cor}">${c.val}</div>
+            <div class="metric-note">${c.sub}</div>
+          </div>`).join('');
+      }
+
+      function renderMetas() {
+        renderMetasResumo();
+        const el = document.getElementById('lista-metas');
+        if (!el) return;
+
+        if (!state.metas.length) {
+          el.innerHTML = `<div class="meta-empty">
+            <div class="em-icon">🎯</div>
+            <p>Nenhuma meta cadastrada ainda.</p>
+            <p style="font-size:12px;color:var(--dim);margin-top:4px">Crie sua primeira meta acima!</p>
+          </div>`;
+          document.getElementById('card-chart-metas').style.display = 'none';
+          return;
+        }
+
+        // Sort: incompletas por prioridade, depois concluídas
+        const pOrder = { alta: 0, media: 1, baixa: 2 };
+        const sorted = [...state.metas].sort((a, b) => {
+          const aCon = a.atual >= a.valor;
+          const bCon = b.atual >= b.valor;
+          if (aCon !== bCon) return aCon ? 1 : -1;
+          return (pOrder[a.prioridade] || 1) - (pOrder[b.prioridade] || 1);
+        });
+
+        el.innerHTML = sorted.map(m => {
+          const cat = META_CATS[m.cat] || META_CATS.outro;
+          const prio = META_PRIO[m.prioridade] || META_PRIO.media;
+          const pct = m.valor > 0 ? clamp(m.atual / m.valor * 100, 0, 100) : 0;
+          const pctR = Math.round(pct);
+          const falta = Math.max(0, m.valor - m.atual);
+          const concluida = m.atual >= m.valor;
+          const meses = mesesRestantes(m.prazo);
+          const mensal = (meses && meses > 0 && falta > 0) ? falta / meses : null;
+
+          let prazoInfo = '';
+          if (m.prazo) {
+            if (concluida) {
+              prazoInfo = `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:7px;padding:5px 10px;margin-top:8px">🏆 Meta concluída!</div>`;
+            } else if (meses !== null) {
+              const urgente = meses <= 2;
+              const cor = meses < 0 ? 'var(--red)' : urgente ? 'var(--yellow)' : 'var(--muted)';
+              const bg = meses < 0 ? 'rgba(248,113,113,.08)' : urgente ? 'rgba(251,191,36,.08)' : 'var(--s2)';
+              const brd = meses < 0 ? 'rgba(248,113,113,.2)' : urgente ? 'rgba(251,191,36,.2)' : 'var(--b0)';
+              prazoInfo = `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:${cor};background:${bg};border:1px solid ${brd};border-radius:7px;padding:5px 10px;margin-top:8px">
+                ${meses < 0 ? '⚠️ Prazo vencido' : meses === 0 ? '⏰ Vence este mês' : `⏳ ${meses} mês${meses!==1?'es':''} restante${meses!==1?'s':''}`}
+                ${mensal ? ` · precisa poupar ${fmt(mensal)}/mês` : ''}
+              </div>`;
+            }
+          }
+
+          return `<div class="meta-card ${concluida ? 'concluida' : ''}" style="--meta-color:${cat.color}">
+            <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+              <div class="meta-icon" style="background:${cat.bg}">${cat.icon}</div>
+              <div style="flex:1;min-width:0">
+                <div class="meta-nome">${m.nome}</div>
+                <div class="meta-sub">Prazo: ${m.prazo ? fmtMes(m.prazo) : 'Sem prazo definido'}</div>
+              </div>
+              <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+                <span class="badge ${prio.cls}">${prio.label}</span>
+                ${concluida ? '<span class="badge b-green">✅ Concluída</span>' : ''}
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+              <div class="meta-val-box">
+                <div class="meta-val-label">Meta</div>
+                <div class="meta-val-num" style="color:${cat.color}">${fmt(m.valor)}</div>
+              </div>
+              <div class="meta-val-box">
+                <div class="meta-val-label">Acumulado</div>
+                <div class="meta-val-num" style="color:var(--green)">${fmt(m.atual)}</div>
+              </div>
+              <div class="meta-val-box">
+                <div class="meta-val-label">Faltam</div>
+                <div class="meta-val-num" style="color:${concluida?'var(--green)':'var(--text)'}">${concluida ? '🏆 Pronto' : fmt(falta)}</div>
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;color:var(--muted)">
+              <span>Progresso</span>
+              <span style="font-family:var(--ff);font-size:18px;font-weight:700;color:${cat.color}">${pctR}%</span>
+            </div>
+            <div class="meta-prog-bar">
+              <div class="meta-prog-fill" style="width:${pctR}%;background:${cat.color}"></div>
+            </div>
+
+            ${prazoInfo}
+
+            ${!concluida ? `<div style="display:flex;gap:6px;margin-top:12px;align-items:center;flex-wrap:wrap">
+              <span style="font-size:12px;color:var(--muted);flex-shrink:0">Aportar:</span>
+              <span style="font-size:12px;color:var(--dim);flex-shrink:0">R$</span>
+              <input type="number" id="aporte-${m.id}" class="meta-aporte-inp" placeholder="0" min="1" step="50">
+              <button class="meta-btn-aporte" onclick="aportarMeta('${m.id}')">+ Adicionar</button>
+              <button class="meta-btn-rm" onclick="removerMeta('${m.id}')">remover</button>
+            </div>` : `<div style="display:flex;gap:6px;margin-top:10px">
+              <button class="meta-btn-rm" onclick="removerMeta('${m.id}')">remover</button>
+            </div>`}
+          </div>`;
+        }).join('');
+
+        // Chart
+        renderMetasChart();
+      }
+
+      function renderMetasChart() {
+        const chartCard = document.getElementById('card-chart-metas');
+        if (!state.metas.length) { if(chartCard) chartCard.style.display='none'; return; }
+        if (chartCard) chartCard.style.display = 'block';
+
+        const ctx = document.getElementById('chart-metas');
+        if (!ctx) return;
+        if (charts.metas) charts.metas.destroy();
+
+        const sorted = [...state.metas].sort((a,b) => b.valor - a.valor).slice(0, 8);
+        const cats = sorted.map(m => META_CATS[m.cat] || META_CATS.outro);
+
+        charts.metas = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: sorted.map(m => m.nome.length > 14 ? m.nome.slice(0,14)+'…' : m.nome),
+            datasets: [
+              {
+                label: 'Acumulado',
+                data: sorted.map(m => m.atual),
+                backgroundColor: cats.map(c => c.color.replace('var(--','').replace(')','') === 'acc' ? 'rgba(200,255,87,.7)' : c.bg.replace('rgba(', 'rgba(').replace('.12)', '.7)')),
+                borderRadius: 6, borderSkipped: false
+              },
+              {
+                label: 'Meta total',
+                data: sorted.map(m => m.valor),
+                backgroundColor: 'rgba(255,255,255,.06)',
+                borderRadius: 6, borderSkipped: false
+              }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#7a7f96', font: { size: 11 } } },
+              tooltip: { callbacks: { label: c => ' ' + fmt(c.parsed.y) } }
+            },
+            scales: {
+              x: { ticks: { color: '#7a7f96', font: { size: 11 } }, grid: { display: false } },
+              y: { ticks: { color: '#7a7f96', font: { size: 11 }, callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,.04)' } }
+            }
+          }
+        });
+      }
+
+      // ══════════════════════════════════════════
       //  🔐 SUPABASE AUTH + PERSISTÊNCIA
       //  CONFIGURE AQUI com suas credenciais:
       // ══════════════════════════════════════════
@@ -3739,6 +4140,7 @@
           if (saved.investimentos?.length) state.investimentos = saved.investimentos;
           if (saved.emergAtual !== undefined) state.emergAtual = saved.emergAtual;
           if (saved.beneficios) state.beneficios = { ...state.beneficios, ...saved.beneficios };
+          if (saved.metas?.length) state.metas = saved.metas;
           return true;
         } catch (e) { console.warn('Load error', e); return false; }
       }
@@ -3857,6 +4259,7 @@
         renderCartoes();
         renderDividas();
         renderInvestimentos();
+        renderMetas();
         ['va', 'vr', 'vt', 'vhome', 'vsaude', 'voutra'].forEach(k => {
           const el = document.getElementById(k);
           if (el && state.beneficios[k]) el.value = state.beneficios[k];
