@@ -1271,6 +1271,7 @@
         <button class="nav-btn" onclick="nav('emergencia',this)"><span class="nav-icon">🛡️</span>Reserva
           emergência</button>
         <button class="nav-btn" onclick="nav('plano',this)"><span class="nav-icon">📅</span>Plano quitação</button>
+        <button class="nav-btn" onclick="nav('projecao',this)"><span class="nav-icon">🔮</span>Projeção mensal</button>
 
         <button class="nav-btn" onclick="doLogout()" style="color:var(--red);margin-top:.5rem;"><span
             class="nav-icon">🚪</span>Sair da conta</button>
@@ -1620,6 +1621,25 @@
             <div class="page-sub">Projeção mês a mês até zerar todas as dívidas</div>
           </div>
           <div id="meses-plano"></div>
+        </div>
+
+        <!-- ════════ PROJEÇÃO MENSAL ════════ -->
+        <div class="page" id="page-projecao">
+          <div class="page-head">
+            <div class="page-title">Projeção mensal</div>
+            <div class="page-sub">Entradas, saídas e saldo estimado para os próximos meses</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap;">
+            <label style="font-size:13px;color:var(--muted);">Quantos meses projetar:</label>
+            <select id="proj-meses" onchange="renderProjecao()" style="background:var(--s2);border:1px solid var(--b2);border-radius:8px;padding:6px 12px;color:var(--text);font-size:13px;font-family:var(--fb);">
+              <option value="3">3 meses</option>
+              <option value="6" selected>6 meses</option>
+              <option value="12">12 meses</option>
+              <option value="24">24 meses</option>
+            </select>
+          </div>
+          <div id="proj-resumo" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:1.5rem;"></div>
+          <div id="proj-tabela"></div>
         </div>
 
       </main>
@@ -3738,6 +3758,97 @@
       // ══════════════════════════════════════════
       //  🚀 INICIALIZAÇÃO COM AUTH
       // ══════════════════════════════════════════
+
+      // ══════════════════════════════════════════
+      //  PROJEÇÃO MENSAL
+      // ══════════════════════════════════════════
+      function renderProjecao() {
+        const n = parseInt(document.getElementById('proj-meses')?.value || 6);
+        const now = new Date();
+        const meses = [];
+
+        // Calcula totais base do state atual
+        const totalRendas = state.rendas.reduce((s, r) => s + (r.valor || 0), 0)
+          + (state.beneficios ? Object.values(state.beneficios).reduce((s, v) => s + (Number(v) || 0), 0) : 0);
+
+        const totalEssenciais = state.essenciais.reduce((s, e) => s + (e.valor || 0), 0);
+        const totalNE = state.naoEssenciais.reduce((s, e) => s + (e.valor || 0), 0);
+        const totalCartoes = state.cartoes.reduce((s, c) => s + (c.fatura || 0), 0);
+        const totalDividas = state.dividas.reduce((s, d) => s + (d.minimo || 0), 0);
+        const totalSaidas = totalEssenciais + totalNE + totalCartoes + totalDividas;
+
+        let saldoAcumulado = 0;
+
+        for (let i = 0; i < n; i++) {
+          const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+          const nomeMes = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+          const saldo = totalRendas - totalSaidas;
+          saldoAcumulado += saldo;
+
+          meses.push({
+            nome: nomeMes,
+            entradas: totalRendas,
+            saidas: totalSaidas,
+            essenciais: totalEssenciais,
+            naoEssenciais: totalNE,
+            cartoes: totalCartoes,
+            dividas: totalDividas,
+            saldo,
+            saldoAcumulado,
+          });
+        }
+
+        // Resumo cards
+        const mediaEntradas = meses.reduce((s, m) => s + m.entradas, 0) / n;
+        const mediaSaidas = meses.reduce((s, m) => s + m.saidas, 0) / n;
+        const mediaSaldo = mediaEntradas - mediaSaidas;
+        const resumoEl = document.getElementById('proj-resumo');
+        if (resumoEl) {
+          resumoEl.innerHTML = [
+            { label: 'Entrada média/mês', val: mediaEntradas, cor: 'var(--green)' },
+            { label: 'Saída média/mês', val: mediaSaidas, cor: 'var(--red)' },
+            { label: 'Saldo médio/mês', val: mediaSaldo, cor: mediaSaldo >= 0 ? 'var(--acc)' : 'var(--red)' },
+            { label: `Acumulado em ${n} meses`, val: saldoAcumulado, cor: saldoAcumulado >= 0 ? 'var(--blue)' : 'var(--red)' },
+          ].map(c => `
+            <div style="background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:1rem 1.25rem;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">${c.label}</div>
+              <div style="font-size:20px;font-weight:600;color:${c.cor};">${fmt(c.val)}</div>
+            </div>`).join('');
+        }
+
+        // Tabela meses
+        const tabelaEl = document.getElementById('proj-tabela');
+        if (!tabelaEl) return;
+        tabelaEl.innerHTML = meses.map((m, i) => `
+          <div style="background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+              <div style="font-size:15px;font-weight:600;color:var(--text);text-transform:capitalize;">${m.nome}</div>
+              <div style="font-size:14px;font-weight:600;color:${m.saldo >= 0 ? 'var(--acc)' : 'var(--red)'};">
+                Saldo: ${fmt(m.saldo)}
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+              <div style="background:var(--s3);border-radius:8px;padding:10px 12px;">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">💰 Entradas</div>
+                <div style="font-size:16px;color:var(--green);font-weight:600;">${fmt(m.entradas)}</div>
+              </div>
+              <div style="background:var(--s3);border-radius:8px;padding:10px 12px;">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">💸 Saídas</div>
+                <div style="font-size:16px;color:var(--red);font-weight:600;">${fmt(m.saidas)}</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;">
+              <div style="font-size:12px;color:var(--muted);">🏠 Essenciais: <span style="color:var(--text)">${fmt(m.essenciais)}</span></div>
+              <div style="font-size:12px;color:var(--muted);">🛍️ Não essenciais: <span style="color:var(--text)">${fmt(m.naoEssenciais)}</span></div>
+              <div style="font-size:12px;color:var(--muted);">💳 Cartões: <span style="color:var(--text)">${fmt(m.cartoes)}</span></div>
+              <div style="font-size:12px;color:var(--muted);">⚠️ Dívidas: <span style="color:var(--text)">${fmt(m.dividas)}</span></div>
+            </div>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--b0);font-size:12px;color:var(--muted);">
+              Saldo acumulado até aqui: <span style="color:${m.saldoAcumulado >= 0 ? 'var(--blue)' : 'var(--red)'};">${fmt(m.saldoAcumulado)}</span>
+            </div>
+          </div>`).join('');
+      }
+
       function initApp() {
         renderMembros();
         renderRendas();
@@ -3753,6 +3864,7 @@
         const ea = document.getElementById('emerg-atual');
         if (ea) ea.value = state.emergAtual || 0;
         calcular();
+        renderProjecao();
         showToast('✅ Bem-vindo ao FinançaMinha!', 'green');
       }
 
