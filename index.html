@@ -94,6 +94,44 @@
       border-radius: 99px;
     }
 
+    /* ── CHECKBOX PAGO ── */
+    .chk-pago {
+      display: flex; align-items: center; gap: 7px;
+      cursor: pointer; user-select: none;
+      padding: 4px 8px;
+      border-radius: 7px;
+      border: 1px solid var(--b1);
+      background: var(--s2);
+      font-size: 12px;
+      color: var(--muted);
+      transition: all .15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .chk-pago:hover { border-color: var(--green); color: var(--green); }
+    .chk-pago.pago {
+      background: rgba(74,222,128,.1);
+      border-color: rgba(74,222,128,.35);
+      color: var(--green);
+    }
+    .chk-pago input { display: none; }
+    .chk-pago-box {
+      width: 15px; height: 15px;
+      border: 1.5px solid currentColor;
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      transition: all .15s;
+    }
+    .item-card.pago {
+      opacity: .65;
+    }
+    .item-card.pago .item-name-inp {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+
     /* ── METAS ── */
     .meta-card {
       background: var(--s1);
@@ -1516,6 +1554,7 @@
             <div class="page-title">Despesas essenciais</div>
             <div class="page-sub">Informe valor, vencimento, membro e se é fixo ou variável</div>
           </div>
+          <div id="pago-bar-ess" style="margin-bottom:1rem"></div>
           <div id="lista-essenciais"></div>
           <button class="add-btn" onclick="addEssencial()">+ Adicionar despesa essencial</button>
           <div class="card">
@@ -1530,6 +1569,7 @@
             <div class="page-title">Despesas não essenciais</div>
             <div class="page-sub">Gastos que podem ser cortados em caso de aperto</div>
           </div>
+          <div id="pago-bar-ne" style="margin-bottom:1rem"></div>
           <div id="lista-ne"></div>
           <button class="add-btn" onclick="addNE()">+ Adicionar despesa</button>
           <div class="card">
@@ -2397,16 +2437,55 @@
       //  ESSENCIAIS
       // ══════════════════════════════════════════
       function addEssencial() {
-        state.essenciais.push({ id: uid('e'), nome: 'Nova despesa', valor: 0, dia: 10, membro: state.membros[0]?.id || 'm1', cat: 'outros', fixo: true });
+        state.essenciais.push({ id: uid('e'), nome: 'Nova despesa', valor: 0, dia: 10, membro: state.membros[0]?.id || 'm1', cat: 'outros', fixo: true, pago: false });
         renderEssenciais(); calcular();
       }
       function removeEssencial(id) { state.essenciais = state.essenciais.filter(e => e.id !== id); renderEssenciais(); calcular(); }
+      function renderPagoBar(elId, items) {
+        const el = document.getElementById(elId); if (!el || !items.length) { if(el) el.innerHTML=''; return; }
+        const total = items.length;
+        const pagas = items.filter(x => x.pago).length;
+        const pct = Math.round(pagas / total * 100);
+        const valPago = items.filter(x => x.pago).reduce((s,x) => s + x.valor, 0);
+        const valTotal = items.reduce((s,x) => s + x.valor, 0);
+        const cor = pct === 100 ? 'var(--green)' : pct >= 50 ? 'var(--acc)' : 'var(--yellow)';
+        el.innerHTML = `<div class="card" style="padding:1rem 1.25rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:13px;font-weight:600;color:var(--text)">${pagas === total ? '🎉' : '💳'} Contas pagas</span>
+              <span style="font-size:12px;color:var(--muted)">${pagas} de ${total}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="font-size:12px;color:var(--green)">${fmt(valPago)} pago</span>
+              <span style="font-size:12px;color:var(--muted)">/ ${fmt(valTotal)} total</span>
+              <span style="font-family:var(--ff);font-size:17px;font-weight:700;color:${cor}">${pct}%</span>
+            </div>
+          </div>
+          <div style="background:var(--s3);border-radius:99px;height:8px;overflow:hidden">
+            <div style="height:100%;border-radius:99px;width:${pct}%;background:${cor};transition:width .5s cubic-bezier(.4,0,.2,1)"></div>
+          </div>
+          ${pct === 100 ? '<div style="margin-top:8px;font-size:12px;color:var(--green);text-align:center">✅ Todas as contas pagas este mês!</div>' : ''}
+        </div>`;
+      }
+
+      function togglePagoEss(id) {
+        const e = state.essenciais.find(x => x.id === id);
+        if (e) { e.pago = !e.pago; renderEssenciais(); debounceAutoSave(); }
+      }
+      function togglePagoNE(id) {
+        const n = state.naoEssenciais.find(x => x.id === id);
+        if (n) { n.pago = !n.pago; renderNE(); debounceAutoSave(); }
+      }
       function renderEssenciais() {
         const el = document.getElementById('lista-essenciais'); if (!el) return;
         el.innerHTML = '';
         state.essenciais.forEach((e, i) => {
-          el.innerHTML += `<div class="item-card">
+          el.innerHTML += `<div class="item-card${e.pago ? ' pago' : ''}">
       <div class="item-top">
+        <label class="chk-pago${e.pago ? ' pago' : ''}" onclick="togglePagoEss('${e.id}')">
+          <div class="chk-pago-box">${e.pago ? '✓' : ''}</div>
+          ${e.pago ? 'Pago' : 'Marcar pago'}
+        </label>
         <input class="item-name-inp" value="${e.nome}" onchange="state.essenciais[${i}].nome=this.value;calcular()">
         <span class="badge ${e.fixo ? 'b-blue' : 'b-yellow'}">${e.fixo ? 'Fixo' : 'Variável'}</span>
         <div class="venc-dot ${getDotClass(e.dia)}"></div>
@@ -2430,6 +2509,7 @@
       </div>
     </div>`;
         });
+        renderPagoBar('pago-bar-ess', state.essenciais);
       }
       function renderResumoEss(tot, cov) {
         const el = document.getElementById('resumo-essenciais'); if (!el) return;
@@ -2447,7 +2527,7 @@
       //  NÃO ESSENCIAIS
       // ══════════════════════════════════════════
       function addNE() {
-        state.naoEssenciais.push({ id: uid('n'), nome: 'Nova despesa', valor: 0, dia: 20, membro: state.membros[0]?.id || 'm1', cat: 'outros', fixo: false });
+        state.naoEssenciais.push({ id: uid('n'), nome: 'Nova despesa', valor: 0, dia: 20, membro: state.membros[0]?.id || 'm1', cat: 'outros', fixo: false, pago: false });
         renderNE(); calcular();
       }
       function removeNE(id) { state.naoEssenciais = state.naoEssenciais.filter(n => n.id !== id); renderNE(); calcular(); }
@@ -2455,8 +2535,12 @@
         const el = document.getElementById('lista-ne'); if (!el) return;
         el.innerHTML = '';
         state.naoEssenciais.forEach((n, i) => {
-          el.innerHTML += `<div class="item-card">
+          el.innerHTML += `<div class="item-card${n.pago ? ' pago' : ''}">
       <div class="item-top">
+        <label class="chk-pago${n.pago ? ' pago' : ''}" onclick="togglePagoNE('${n.id}')">
+          <div class="chk-pago-box">${n.pago ? '✓' : ''}</div>
+          ${n.pago ? 'Pago' : 'Marcar pago'}
+        </label>
         <input class="item-name-inp" value="${n.nome}" onchange="state.naoEssenciais[${i}].nome=this.value;calcular()">
         <span class="badge ${n.fixo ? 'b-blue' : 'b-yellow'}">${n.fixo ? 'Fixo' : 'Variável'}</span>
         <div class="venc-dot ${getDotClass(n.dia)}"></div>
@@ -2480,6 +2564,7 @@
       </div>
     </div>`;
         });
+        renderPagoBar('pago-bar-ne', state.naoEssenciais);
       }
       function renderResumoNE(tot, cov) {
         const el = document.getElementById('resumo-ne'); if (!el) return;
