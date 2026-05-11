@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinançaMinha — Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #09090d; --s1: #111318; --s2: #181b22; --s3: #1e2230; --s4: #252838;
+      --b0: rgba(255,255,255,.05); --b1: rgba(255,255,255,.09); --b2: rgba(255,255,255,.15);
+      --text: #eeeef0; --muted: #7a7f96; --dim: #4a4f66;
+      --green: #4ade80; --red: #f87171; --yellow: #fbbf24; --acc: #c8ff57;
+      --ff: 'Syne', sans-serif; --fb: 'Instrument Sans', sans-serif;
+      --radius: 12px; --radius-sm: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--fb); font-size: 14px; min-height: 100vh; }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; gap: 1.5rem; padding: 2rem;
+    }
+    .login-box {
+      background: var(--s1); border: 1px solid var(--b1); border-radius: var(--radius);
+      padding: 2rem; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 1rem;
+    }
+    .login-title { font-family: var(--ff); font-size: 22px; font-weight: 700; color: var(--acc); text-align: center; }
+    .login-sub { font-size: 12px; color: var(--muted); text-align: center; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .field input {
+      background: var(--s2); border: 1px solid var(--b1); border-radius: var(--radius-sm);
+      color: var(--text); font-family: var(--fb); font-size: 14px; padding: 10px 12px; outline: none;
+      transition: border-color .15s;
+    }
+    .field input:focus { border-color: var(--acc); }
+    #login-err { font-size: 12px; color: var(--red); text-align: center; min-height: 18px; }
+    .btn-acc {
+      background: var(--acc); color: #000; border: none; border-radius: var(--radius-sm);
+      font-family: var(--ff); font-weight: 700; font-size: 14px; padding: 11px;
+      cursor: pointer; transition: opacity .15s; width: 100%;
+    }
+    .btn-acc:hover { opacity: .88; }
+    .btn-acc:disabled { opacity: .4; cursor: default; }
+
+    /* ── LAYOUT ADMIN ── */
+    #admin-screen { display: none; }
+    .topbar {
+      background: var(--s1); border-bottom: 1px solid var(--b1);
+      padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-logo { font-family: var(--ff); font-size: 16px; font-weight: 700; color: var(--acc); }
+    .topbar-logo span { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    #admin-email { font-size: 12px; color: var(--muted); }
+    .btn-sm {
+      background: var(--s2); border: 1px solid var(--b1); border-radius: var(--radius-sm);
+      color: var(--text); font-family: var(--fb); font-size: 12px; padding: 6px 12px;
+      cursor: pointer; transition: all .15s;
+    }
+    .btn-sm:hover { border-color: var(--b2); background: var(--s3); }
+    .btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+
+    .main { max-width: 960px; margin: 0 auto; padding: 2rem; }
+    .main-title { font-family: var(--ff); font-size: 22px; font-weight: 700; margin-bottom: .25rem; }
+    .main-sub { font-size: 13px; color: var(--muted); margin-bottom: 2rem; }
+
+    /* ── CARDS DE CONFIG ── */
+    .cfg-grid { display: flex; flex-direction: column; gap: 1rem; }
+    .cfg-card {
+      background: var(--s1); border: 1px solid var(--b1); border-radius: var(--radius);
+      overflow: hidden; transition: border-color .15s;
+    }
+    .cfg-card:hover { border-color: var(--b2); }
+    .cfg-header {
+      padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; user-select: none; gap: 1rem;
+    }
+    .cfg-header-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .cfg-chave { font-family: var(--ff); font-size: 13px; font-weight: 700; color: var(--acc); }
+    .cfg-desc { font-size: 12px; color: var(--muted); }
+    .cfg-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .cfg-updated { font-size: 11px; color: var(--dim); }
+    .cfg-chevron { color: var(--muted); font-size: 12px; transition: transform .2s; }
+    .cfg-card.open .cfg-chevron { transform: rotate(180deg); }
+
+    .cfg-body { display: none; padding: 0 1.25rem 1.25rem; border-top: 1px solid var(--b1); }
+    .cfg-card.open .cfg-body { display: block; }
+    .cfg-body-inner { padding-top: 1rem; }
+
+    .editor-wrap { position: relative; }
+    textarea.json-editor {
+      width: 100%; background: var(--s2); border: 1px solid var(--b1);
+      border-radius: var(--radius-sm); color: var(--text); font-family: 'Courier New', monospace;
+      font-size: 12px; line-height: 1.6; padding: 12px; outline: none; resize: vertical;
+      min-height: 120px; transition: border-color .15s;
+    }
+    textarea.json-editor:focus { border-color: var(--acc); }
+    textarea.json-editor.error { border-color: var(--red); }
+    .json-err { font-size: 11px; color: var(--red); margin-top: 6px; min-height: 16px; }
+    .json-ok { font-size: 11px; color: var(--green); margin-top: 6px; }
+
+    .cfg-actions { display: flex; align-items: center; gap: 10px; margin-top: 1rem; justify-content: flex-end; }
+    .btn-save {
+      background: rgba(200,255,87,.12); border: 1px solid rgba(200,255,87,.3);
+      border-radius: var(--radius-sm); color: var(--acc); font-family: var(--fb);
+      font-size: 12px; font-weight: 500; padding: 7px 16px; cursor: pointer; transition: all .15s;
+    }
+    .btn-save:hover { background: rgba(200,255,87,.22); }
+    .btn-save:disabled { opacity: .4; cursor: default; }
+    .btn-reset {
+      background: none; border: 1px solid var(--b1); border-radius: var(--radius-sm);
+      color: var(--muted); font-family: var(--fb); font-size: 12px; padding: 7px 12px;
+      cursor: pointer; transition: all .15s;
+    }
+    .btn-reset:hover { border-color: var(--b2); color: var(--text); }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--s3); border: 1px solid var(--b2); border-radius: 99px;
+      padding: 10px 20px; font-size: 13px; z-index: 9999;
+      transition: transform .3s cubic-bezier(.4,0,.2,1), opacity .3s;
+      opacity: 0; pointer-events: none; white-space: nowrap;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    #toast.green { border-color: rgba(74,222,128,.35); color: var(--green); }
+    #toast.red { border-color: rgba(248,113,113,.35); color: var(--red); }
+
+    /* ── LOADING ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--s2) 25%, var(--s3) 50%, var(--s2) 75%);
+      background-size: 200% 100%; animation: sk 1.4s infinite; border-radius: var(--radius-sm);
+      height: 72px;
+    }
+    @keyframes sk { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+
+    .badge-json { display: inline-block; background: var(--s3); border-radius: 4px; padding: 1px 6px; font-size: 10px; color: var(--muted); font-family: monospace; }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-title">FinançaMinha</div>
+    <div class="login-sub">Painel de configurações — acesso restrito a admins</div>
+    <div class="field">
+      <label>E-mail</label>
+      <input id="adm-email" type="email" placeholder="seu@email.com">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input id="adm-pass" type="password" placeholder="••••••••">
+    </div>
+    <div id="login-err"></div>
+    <button class="btn-acc" id="btn-adm-login" onclick="doAdminLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- ── ADMIN ── -->
+<div id="admin-screen">
+  <div class="topbar">
+    <div class="topbar-logo">FinançaMinha <span>Admin</span></div>
+    <div class="topbar-right">
+      <span id="admin-email"></span>
+      <button class="btn-sm danger" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="main-title">Configurações do App</div>
+    <div class="main-sub">Edite os valores abaixo em JSON. Alterações são aplicadas imediatamente para todos os usuários.</div>
+    <div id="cfg-grid" class="cfg-grid">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ══════════════════════════════════════════
+  //  CONFIGURE com suas credenciais Supabase:
+  // ══════════════════════════════════════════
+  const SUPABASE_URL  = 'https://iapsjwiahrngytrxawrj.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_6rRbVuPIfuF56utFPfVzLg_waXyH5XS';
+  // ══════════════════════════════════════════
+
+  const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let _configs = []; // cache local
+
+  // ── Helpers ──
+  function showToast(msg, type = 'green', ms = 2800) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `show ${type}`;
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => { t.className = ''; }, ms);
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function prettyJson(val) {
+    try { return JSON.stringify(val, null, 2); }
+    catch { return String(val); }
+  }
+
+  // ── Login ──
+  async function doAdminLogin() {
+    const email = document.getElementById('adm-email').value.trim();
+    const pass  = document.getElementById('adm-pass').value;
+    const btn   = document.getElementById('btn-adm-login');
+    const err   = document.getElementById('login-err');
+    err.textContent = '';
+    btn.disabled = true; btn.textContent = 'Entrando…';
+
+    try {
+      const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
+
+      // Verifica se é admin
+      const meta = data.user?.app_metadata || {};
+      if (meta.role !== 'admin') {
+        await _sb.auth.signOut();
+        throw new Error('Acesso negado. Usuário sem permissão de admin.');
+      }
+
+      document.getElementById('admin-email').textContent = data.user.email;
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-screen').style.display = 'block';
+      loadConfigs();
+    } catch (e) {
+      err.textContent = e.message.includes('Invalid login') ? 'E-mail ou senha incorretos.' : e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Entrar';
+    }
+  }
+
+  async function doLogout() {
+    await _sb.auth.signOut();
+    location.reload();
+  }
+
+  // ── Carregar configs ──
+  async function loadConfigs() {
+    const { data, error } = await _sb.from('app_config').select('*').order('chave');
+    if (error) { showToast('Erro ao carregar configurações', 'red'); return; }
+    _configs = data;
+    renderGrid(data);
+  }
+
+  function renderGrid(configs) {
+    const grid = document.getElementById('cfg-grid');
+    grid.innerHTML = '';
+
+    configs.forEach(cfg => {
+      const card = document.createElement('div');
+      card.className = 'cfg-card';
+      card.id = `card-${cfg.chave}`;
+
+      const originalJson = prettyJson(cfg.valor);
+
+      card.innerHTML = `
+        <div class="cfg-header" onclick="toggleCard('${cfg.chave}')">
+          <div class="cfg-header-left">
+            <div class="cfg-chave">${cfg.chave} <span class="badge-json">JSON</span></div>
+            <div class="cfg-desc">${cfg.descricao || ''}</div>
+          </div>
+          <div class="cfg-header-right">
+            <span class="cfg-updated">Atualizado: ${formatDate(cfg.updated_at)}</span>
+            <span class="cfg-chevron">▼</span>
+          </div>
+        </div>
+        <div class="cfg-body">
+          <div class="cfg-body-inner">
+            <div class="editor-wrap">
+              <textarea class="json-editor" id="ta-${cfg.chave}" rows="10"
+                oninput="validateJson('${cfg.chave}')">${originalJson}</textarea>
+            </div>
+            <div id="err-${cfg.chave}" class="json-err"></div>
+            <div class="cfg-actions">
+              <button class="btn-reset" onclick="resetEditor('${cfg.chave}')">Desfazer</button>
+              <button class="btn-save" id="save-${cfg.chave}" onclick="saveConfig('${cfg.chave}')">💾 Salvar</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Guarda original no dataset
+      card.querySelector(`#ta-${cfg.chave}`).dataset.original = originalJson;
+      grid.appendChild(card);
+    });
+  }
+
+  function toggleCard(chave) {
+    const card = document.getElementById(`card-${chave}`);
+    card.classList.toggle('open');
+  }
+
+  function validateJson(chave) {
+    const ta  = document.getElementById(`ta-${chave}`);
+    const err = document.getElementById(`err-${chave}`);
+    const btn = document.getElementById(`save-${chave}`);
+    try {
+      JSON.parse(ta.value);
+      ta.classList.remove('error');
+      err.textContent = '';
+      err.className = 'json-ok';
+      err.textContent = '✓ JSON válido';
+      btn.disabled = false;
+    } catch (e) {
+      ta.classList.add('error');
+      err.className = 'json-err';
+      err.textContent = '✗ ' + e.message;
+      btn.disabled = true;
+    }
+  }
+
+  function resetEditor(chave) {
+    const ta  = document.getElementById(`ta-${chave}`);
+    const err = document.getElementById(`err-${chave}`);
+    ta.value = ta.dataset.original;
+    ta.classList.remove('error');
+    err.textContent = '';
+    document.getElementById(`save-${chave}`).disabled = false;
+  }
+
+  async function saveConfig(chave) {
+    const ta  = document.getElementById(`ta-${chave}`);
+    const btn = document.getElementById(`save-${chave}`);
+    let parsed;
+    try { parsed = JSON.parse(ta.value); }
+    catch { showToast('JSON inválido', 'red'); return; }
+
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    try {
+      const { error } = await _sb.from('app_config')
+        .update({ valor: parsed, updated_at: new Date().toISOString() })
+        .eq('chave', chave);
+      if (error) throw error;
+
+      // Atualiza o "original" para que Desfazer aponte para o novo valor salvo
+      ta.dataset.original = prettyJson(parsed);
+
+      // Atualiza timestamp no card
+      const card = document.getElementById(`card-${chave}`);
+      card.querySelector('.cfg-updated').textContent = 'Atualizado: agora';
+
+      showToast(`✅ "${chave}" salvo com sucesso!`, 'green');
+    } catch (e) {
+      showToast('Erro ao salvar: ' + e.message, 'red', 4000);
+    } finally {
+      btn.disabled = false; btn.textContent = '💾 Salvar';
+    }
+  }
+
+  // ── Boot: verificar sessão existente ──
+  document.addEventListener('DOMContentLoaded', async () => {
+    const { data: { session } } = await _sb.auth.getSession();
+    if (session?.user) {
+      const meta = session.user.app_metadata || {};
+      if (meta.role === 'admin') {
+        document.getElementById('admin-email').textContent = session.user.email;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('admin-screen').style.display = 'block';
+        loadConfigs();
+        return;
+      }
+    }
+    // Sem sessão admin válida — mostra login
+    document.getElementById('login-screen').style.display = 'flex';
+  });
+
+  // Enter no campo de senha faz login
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
+      doAdminLogin();
+    }
+  });
+</script>
+</body>
+</html>
