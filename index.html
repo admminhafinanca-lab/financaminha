@@ -2181,49 +2181,65 @@
       function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
       function membroNome(id) { const m = state.membros.find(x => x.id === id); return m ? m.nome : id; }
 
-      const CAT_LABEL = {
-        moradia: 'Moradia', alimentacao: 'Alimentação', utilidades: 'Utilidades',
-        saude: 'Saúde', educacao: 'Educação', investimentos: 'Investimentos',
-        transporte: 'Transporte', lazer: 'Lazer', pessoal: 'Pessoal',
-        credito: 'Crédito', outros: 'Outros', pet: 'Pets'
+      // ── CONFIG GLOBAL (carregada do Supabase via loadConfig()) ──
+      let CFG = {};
+
+      // Aliases reativos: qualquer parte do código que usava as constantes antigas
+      // continua funcionando sem modificação (lêem do CFG em tempo de execução)
+      const _cfgProxy = {
+        get CAT_LABEL()     { return CFG.cat_label     || {}; },
+        get CATS_ESS()      { return CFG.cats_ess      || []; },
+        get CATS_NE()       { return CFG.cats_ne       || []; },
+        get CATS_DIV()      { return CFG.cats_div      || []; },
+        get CATS_DIV_LABEL(){ return CFG.cats_div_label|| {}; },
+        get BANDEIRAS()     { return CFG.bandeiras     || []; },
+        get BANCOS()        { return CFG.bancos        || []; },
+        get TIPOS_CC()      { return CFG.tipos_cc      || []; },
+        get TIPOS_INV()     { return CFG.tipos_inv     || []; },
       };
-      const CATS_ESS = ['moradia', 'alimentacao', 'utilidades', 'saude', 'educacao', 'investimentos', 'pet', 'outros'];
-      const CATS_NE = ['transporte', 'lazer', 'pessoal', 'credito', 'alimentacao', 'outros'];
-      const CATS_DIV = ['credito', 'pessoal', 'financ', 'consig', 'fgts', 'outro'];
-      const CATS_DIV_LABEL = { credito: 'Cartão de crédito', pessoal: 'Empréstimo pessoal', financ: 'Financiamento', consig: 'Consignado', fgts: 'Antecipação FGTS', outro: 'Outro' };
-      const BANDEIRAS = ['Visa', 'Mastercard', 'Elo', 'American Express', 'Hipercard'];
-      const BANCOS = ['Nubank', 'Itaú', 'Bradesco', 'Santander', 'Caixa', 'Banco do Brasil', 'Inter', 'C6 Bank', 'BTG', 'XP', 'PicPay', 'Mercado Pago', 'Next', 'Outro'];
-      const TIPOS_CC = ['Básico', 'Gold', 'Platinum', 'Black/Infinite', 'Empresarial'];
-      const TIPOS_INV = [
-        { v: 'poupanca', l: 'Poupança', taxa: 0.00500, ir: false },
-        { v: 'cdb100', l: 'CDB 100% CDI', taxa: 0.00843, ir: true },
-        { v: 'cdb110', l: 'CDB 110% CDI', taxa: 0.00927, ir: true },
-        { v: 'lci', l: 'LCI/LCA (isento IR)', taxa: 0.00820, ir: false },
-        { v: 'tesouro', l: 'Tesouro Selic', taxa: 0.00870, ir: true },
-        { v: 'fii', l: 'FIIs', taxa: 0.00800, ir: false },
-        { v: 'acoes', l: 'Ações BR', taxa: 0.01100, ir: true },
-        { v: 'cripto', l: 'Cripto (alto risco)', taxa: 0.01500, ir: true },
-        { v: 'custom', l: 'Taxa personalizada', taxa: 0.01000, ir: true },
-      ];
+
+      // Expõe como variáveis globais (window) para compatibilidade total
+      Object.defineProperties(window, {
+        CAT_LABEL:      { get: () => CFG.cat_label      || {}, configurable: true },
+        CATS_ESS:       { get: () => CFG.cats_ess       || [], configurable: true },
+        CATS_NE:        { get: () => CFG.cats_ne        || [], configurable: true },
+        CATS_DIV:       { get: () => CFG.cats_div       || [], configurable: true },
+        CATS_DIV_LABEL: { get: () => CFG.cats_div_label || {}, configurable: true },
+        BANDEIRAS:      { get: () => CFG.bandeiras      || [], configurable: true },
+        BANCOS:         { get: () => CFG.bancos         || [], configurable: true },
+        TIPOS_CC:       { get: () => CFG.tipos_cc       || [], configurable: true },
+        TIPOS_INV:      { get: () => CFG.tipos_inv      || [], configurable: true },
+      });
+
+      async function loadConfig() {
+        try {
+          const { data, error } = await _sb.from('app_config').select('chave, valor');
+          if (error) throw error;
+          data.forEach(row => { CFG[row.chave] = row.valor; });
+        } catch (err) {
+          console.error('[FinançaMinha] Erro ao carregar app_config:', err);
+          // Fallback com valores padrão para não travar o app
+          CFG = {
+            cat_label:      { moradia:'Moradia', alimentacao:'Alimentação', utilidades:'Utilidades', saude:'Saúde', educacao:'Educação', investimentos:'Investimentos', transporte:'Transporte', lazer:'Lazer', pessoal:'Pessoal', credito:'Crédito', outros:'Outros', pet:'Pets' },
+            cats_ess:       ['moradia','alimentacao','utilidades','saude','educacao','investimentos','pet','outros'],
+            cats_ne:        ['transporte','lazer','pessoal','credito','alimentacao','outros'],
+            cats_div:       ['credito','pessoal','financ','consig','fgts','outro'],
+            cats_div_label: { credito:'Cartão de crédito', pessoal:'Empréstimo pessoal', financ:'Financiamento', consig:'Consignado', fgts:'Antecipação FGTS', outro:'Outro' },
+            bandeiras:      ['Visa','Mastercard','Elo','American Express','Hipercard'],
+            bancos:         ['Nubank','Itaú','Bradesco','Santander','Caixa','Banco do Brasil','Inter','C6 Bank','BTG','XP','PicPay','Mercado Pago','Next','Outro'],
+            tipos_cc:       ['Básico','Gold','Platinum','Black/Infinite','Empresarial'],
+            tipos_inv:      [{v:'poupanca',l:'Poupança',taxa:0.005,ir:false},{v:'cdb100',l:'CDB 100% CDI',taxa:0.00843,ir:true},{v:'cdb110',l:'CDB 110% CDI',taxa:0.00927,ir:true},{v:'lci',l:'LCI/LCA (isento IR)',taxa:0.0082,ir:false},{v:'tesouro',l:'Tesouro Selic',taxa:0.0087,ir:true},{v:'fii',l:'FIIs',taxa:0.008,ir:false},{v:'acoes',l:'Ações BR',taxa:0.011,ir:true},{v:'cripto',l:'Cripto (alto risco)',taxa:0.015,ir:true},{v:'custom',l:'Taxa personalizada',taxa:0.01,ir:true}],
+          };
+        }
+      }
       const AVATAR_BG = ['rgba(200,255,87,.15)', 'rgba(96,165,250,.15)', 'rgba(167,139,250,.15)', 'rgba(251,191,36,.15)', 'rgba(248,113,113,.15)', 'rgba(34,211,238,.15)'];
       const AVATAR_C = ['var(--acc)', 'var(--blue)', 'var(--purple)', 'var(--yellow)', 'var(--red)', 'var(--cyan)'];
 
-      const CC_BENEFITS_DB = {
-        'Nubank': { cor: '#820ad1', programa: 'Nubank Rewards', beneficios: ['Sem anuidade', 'Cashback', 'App intuitivo'], milhas: false, pontos: false, cashback: true },
-        'Itaú': { cor: '#f47920', programa: 'Itaú Mastercard', beneficios: ['Pontos transferíveis', 'Sala VIP (Platinum+)', 'Seguro viagem'], milhas: true, pontos: true, cashback: false },
-        'Bradesco': { cor: '#cc092f', programa: 'Livelo', beneficios: ['Pontos Livelo', 'Cashback Elo', 'Parcelamento'], milhas: true, pontos: true, cashback: true },
-        'Santander': { cor: '#ec0000', programa: 'Esfera', beneficios: ['Pontos Esfera', 'Descontos parceiros'], milhas: false, pontos: true, cashback: false },
-        'Caixa': { cor: '#005ca9', programa: 'Caixa Cartões', beneficios: ['Parcelamento longo'], milhas: false, pontos: false, cashback: false },
-        'Banco do Brasil': { cor: '#f8c800', programa: 'Ourocard', beneficios: ['Pontos Smiles', 'Milhas Livelo'], milhas: true, pontos: true, cashback: false },
-        'Inter': { cor: '#ff8c00', programa: 'Inter Cashback', beneficios: ['1% cashback', 'Sem anuidade', 'Shopping Inter'], milhas: false, pontos: false, cashback: true },
-        'C6 Bank': { cor: '#555', programa: 'Átomos', beneficios: ['Sem anuidade', 'Pontos Átomos', 'Smiles'], milhas: true, pontos: true, cashback: false },
-        'BTG': { cor: '#003087', programa: 'BTG+', beneficios: ['Cashback investido automaticamente', 'Black premium'], milhas: false, pontos: false, cashback: true },
-        'XP': { cor: '#c8ff57', programa: 'XP Visa Infinite', beneficios: ['Cashback em investimentos', 'Sala VIP'], milhas: false, pontos: false, cashback: true },
-        'PicPay': { cor: '#21c25e', programa: 'PicPay Card', beneficios: ['Cashback variável', 'Sem anuidade'], milhas: false, pontos: false, cashback: true },
-        'Mercado Pago': { cor: '#009ee3', programa: 'Mercado Pago', beneficios: ['Cashback', 'Parcelamento ML', 'Sem anuidade'], milhas: false, pontos: false, cashback: true },
-        'Next': { cor: '#00b451', programa: 'Next Cashback', beneficios: ['Cashback supermercado/farmácia', 'Sem anuidade'], milhas: false, pontos: false, cashback: true },
-        'Outro': { cor: '#7a7f96', programa: 'Programa próprio', beneficios: ['Consulte o banco'], milhas: false, pontos: false, cashback: false },
-      };
+      // CC_BENEFITS_DB agora vem do Supabase via CFG.cc_benefits
+      Object.defineProperty(window, 'CC_BENEFITS_DB', {
+        get: () => CFG.cc_benefits || {},
+        configurable: true
+      });
 
       // ── TOTALS ──
       function getTotRenda() { return state.rendas.reduce((s, r) => s + r.valor, 0); }
@@ -4713,6 +4729,8 @@
         if (emailEl) emailEl.textContent = user.email;
         // Inicia heartbeat de sessão única
         startSessionHeartbeat();
+        // ── Carrega configurações globais do banco ANTES de tudo ──
+        await loadConfig();
         // Carrega dados do usuário
         await loadStateFromSupabase();
         // Inicializa o app
@@ -4904,4 +4922,3 @@
       });
     </script>
 </body>
-</html>
