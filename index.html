@@ -4671,7 +4671,7 @@
       function setAuthMsg(msg, isError = true) {
         const el = document.getElementById('auth-msg');
         if (!el) return;
-        el.textContent = msg;
+        el.innerHTML = msg; // suporta links e <br> nas mensagens
         el.style.color = isError ? 'var(--red)' : 'var(--green)';
       }
 
@@ -4702,28 +4702,103 @@
       }
 
       async function doSignup() {
-        const name = document.getElementById('auth-name').value.trim();
+        const name  = document.getElementById('auth-name').value.trim();
         const email = document.getElementById('auth-email-s').value.trim();
-        const pass = document.getElementById('auth-pass-s').value;
-        if (!name) { setAuthMsg('Informe seu nome.'); return; }
+        const pass  = document.getElementById('auth-pass-s').value;
+
+        // ── Validações locais ──
+        if (!name)  { setAuthMsg('Informe seu nome.'); return; }
         if (!email) { setAuthMsg('Informe seu e-mail.'); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          setAuthMsg('E-mail inválido. Verifique o endereço digitado.');
+          return;
+        }
         if (pass.length < 6) { setAuthMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
+
         setBtnLoading('btn-signup', true, 'Criar conta');
+        setAuthMsg('');
+
         try {
           const { data, error } = await _sb.auth.signUp({
             email, password: pass,
             options: { data: { full_name: name } }
           });
+
           if (error) throw error;
+
+          // Supabase retorna identities vazio quando o e-mail JÁ existe
+          // mas confirmação de e-mail está ativa (não vaza que o usuário existe)
+          const jaExiste = data.user &&
+            Array.isArray(data.user.identities) &&
+            data.user.identities.length === 0;
+
+          if (jaExiste) {
+            // Caso 1: e-mail já cadastrado — pode estar confirmado ou não
+            // Tentamos login silencioso com senha errada para diferenciar:
+            const { error: loginErr } = await _sb.auth.signInWithPassword({
+              email, password: '##CHECK_ONLY##'
+            });
+            const msgLogin = loginErr?.message || '';
+
+            if (msgLogin.includes('Email not confirmed')) {
+              // Caso 1a: cadastrado mas e-mail não confirmado ainda
+              setAuthMsg(
+                '⚠️ Este e-mail já foi cadastrado mas ainda não foi confirmado. ' +
+                'Verifique sua caixa de entrada (e a pasta de spam). ' +
+                '<br><a href="#" onclick="reenviarConfirmacao(\'' + email + '\')" ' +
+                'style="color:var(--acc);text-decoration:underline;">Reenviar e-mail de confirmação</a>',
+                true
+              );
+            } else {
+              // Caso 1b: cadastrado e confirmado — direciona para login
+              setAuthMsg(
+                '⚠️ Este e-mail já possui cadastro. ' +
+                '<a href="#" onclick="authTab('login')" ' +
+                'style="color:var(--acc);text-decoration:underline;">Clique aqui para entrar</a>',
+                true
+              );
+            }
+            return;
+          }
+
+          // Caso 2: cadastro novo bem-sucedido, aguardando confirmação de e-mail
           if (data.user && !data.session) {
-            setAuthMsg('✅ Conta criada! Enviamos um link de confirmação para ' + email + '. Confirme o e-mail para acessar.', false);
-          } else if (data.session) {
+            setAuthMsg(
+              '✅ Conta criada com sucesso! Enviamos um link de confirmação para <strong>' +
+              email + '</strong>. Clique no link do e-mail para ativar sua conta.<br>' +
+              '<span style="color:var(--muted);font-size:11px;">Não recebeu? Verifique a pasta de spam.</span>',
+              false
+            );
+            return;
+          }
+
+          // Caso 3: confirmação de e-mail desativada no Supabase — entra direto
+          if (data.session) {
             await onAuthSuccess(data.user);
           }
+
         } catch (err) {
           setAuthMsg(traduzErroAuth(err.message));
         } finally {
           setBtnLoading('btn-signup', false, 'Criar conta');
+        }
+      }
+
+      // Reenvia o e-mail de confirmação
+      async function reenviarConfirmacao(email) {
+        try {
+          const { error } = await _sb.auth.resend({
+            type: 'signup',
+            email: email
+          });
+          if (error) throw error;
+          setAuthMsg(
+            '📧 E-mail de confirmação reenviado para <strong>' + email + '</strong>. ' +
+            'Verifique sua caixa de entrada e a pasta de spam.',
+            false
+          );
+        } catch (err) {
+          setAuthMsg('Erro ao reenviar: ' + traduzErroAuth(err.message));
         }
       }
 
@@ -4829,11 +4904,22 @@
       // ── Tradução de erros ──
       function traduzErroAuth(msg) {
         if (!msg) return 'Erro desconhecido.';
-        if (msg.includes('Invalid login credentials')) return 'E-mail ou senha incorretos.';
-        if (msg.includes('Email not confirmed')) return '⚠️ E-mail ainda não confirmado. Verifique sua caixa de entrada e clique no link que enviamos.';
-        if (msg.includes('User already registered')) return 'E-mail já cadastrado. Faça login.';
-        if (msg.includes('Password should be')) return 'Senha muito fraca.';
-        if (msg.includes('rate limit')) return 'Muitas tentativas. Aguarde alguns minutos.';
+        if (msg.includes('Invalid login credentials'))
+          return 'E-mail ou senha incorretos.';
+        if (msg.includes('Email not confirmed'))
+          return '⚠️ E-mail ainda não confirmado. Verifique sua caixa de entrada e clique no link que enviamos.';
+        if (msg.includes('User already registered'))
+          return 'E-mail já cadastrado. Faça login.';
+        if (msg.includes('Password should be') || msg.includes('password'))
+          return 'Senha muito fraca. Use pelo menos 6 caracteres.';
+        if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit'))
+          return 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.';
+        if (msg.includes('unable to validate email') || msg.includes('invalid email'))
+          return 'E-mail inválido. Verifique o endereço digitado.';
+        if (msg.includes('signup is disabled'))
+          return 'Cadastro de novos usuários está desativado no momento.';
+        if (msg.includes('network') || msg.includes('fetch'))
+          return 'Erro de conexão. Verifique sua internet e tente novamente.';
         return msg;
       }
 
