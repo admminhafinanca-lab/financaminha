@@ -4687,7 +4687,7 @@
         const email = document.getElementById('auth-email').value.trim();
         const pass = document.getElementById('auth-pass').value;
         if (!email || !pass) { setAuthMsg('Preencha e-mail e senha.'); return; }
-        setBtnLoading('btn-login', true, 'Entrar');
+        setBtnLoading('btn-login', true, 'Entrar'); clearInterval(_countdownTimer);
         try {
           const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
           if (error) throw error;
@@ -4695,9 +4695,9 @@
           await checkAndKillOtherSessions(data.user.id, data.session.access_token);
           await onAuthSuccess(data.user);
         } catch (err) {
-          setAuthMsg(traduzErroAuth(err.message));
+          const m = traduzErroAuth(err.message, 'btn-login', 'Entrar'); if (m) setAuthMsg(m);
         } finally {
-          setBtnLoading('btn-login', false, 'Entrar');
+          if (!_countdownTimer || !document.getElementById('btn-login').disabled) setBtnLoading('btn-login', false, 'Entrar');
         }
       }
 
@@ -4715,7 +4715,7 @@
         }
         if (pass.length < 6) { setAuthMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
 
-        setBtnLoading('btn-signup', true, 'Criar conta');
+        setBtnLoading('btn-signup', true, 'Criar conta'); clearInterval(_countdownTimer);
         setAuthMsg('');
 
         try {
@@ -4784,9 +4784,9 @@
           }
 
         } catch (err) {
-          setAuthMsg(traduzErroAuth(err.message));
+          const m2 = traduzErroAuth(err.message, 'btn-signup', 'Criar conta'); if (m2) setAuthMsg(m2);
         } finally {
-          setBtnLoading('btn-signup', false, 'Criar conta');
+          if (!_countdownTimer || !document.getElementById('btn-signup').disabled) setBtnLoading('btn-signup', false, 'Criar conta');
         }
       }
 
@@ -4804,7 +4804,7 @@
             false
           );
         } catch (err) {
-          setAuthMsg('Erro ao reenviar: ' + traduzErroAuth(err.message));
+          const m3 = traduzErroAuth(err.message, 'btn-signup', 'Criar conta'); setAuthMsg('Erro ao reenviar: ' + (m3 || ''));
         }
       }
 
@@ -4908,7 +4908,28 @@
       }
 
       // ── Tradução de erros ──
-      function traduzErroAuth(msg) {
+      // ── Contagem regressiva de rate limit ──
+      let _countdownTimer = null;
+      function startRateLimitCountdown(seconds, btnId, originalLabel) {
+        clearInterval(_countdownTimer);
+        const btn = document.getElementById(btnId);
+        let remaining = seconds;
+        if (btn) { btn.disabled = true; btn.textContent = `Aguarde ${remaining}s...`; }
+        setAuthMsg(`⏳ Muitas tentativas. Tente novamente em <strong id="cd-count">${remaining}s</strong>.`, true);
+        _countdownTimer = setInterval(() => {
+          remaining--;
+          const cdEl = document.getElementById('cd-count');
+          if (cdEl) cdEl.textContent = remaining + 's';
+          if (btn) btn.textContent = `Aguarde ${remaining}s...`;
+          if (remaining <= 0) {
+            clearInterval(_countdownTimer);
+            if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+            setAuthMsg('');
+          }
+        }, 1000);
+      }
+
+      function traduzErroAuth(msg, btnId, originalLabel) {
         if (!msg) return 'Erro desconhecido.';
         if (msg.includes('Invalid login credentials'))
           return 'E-mail ou senha incorretos.';
@@ -4916,10 +4937,15 @@
           return '⚠️ E-mail ainda não confirmado. Verifique sua caixa de entrada e clique no link que enviamos.';
         if (msg.includes('User already registered'))
           return 'E-mail já cadastrado. Faça login.';
-        if (msg.includes('Password should be') || msg.includes('password'))
+        if (msg.includes('Password should be') || msg.includes('weak_password'))
           return 'Senha muito fraca. Use pelo menos 6 caracteres.';
-        if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit'))
-          return 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.';
+        if (msg.includes('security purposes') || msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
+          // Extrai os segundos da mensagem do Supabase: "after 57 seconds"
+          const match = msg.match(/(\d+)\s*second/);
+          const secs = match ? parseInt(match[1]) : 60;
+          if (btnId) startRateLimitCountdown(secs, btnId, originalLabel);
+          return ''; // mensagem gerenciada pelo countdown
+        }
         if (msg.includes('unable to validate email') || msg.includes('invalid email'))
           return 'E-mail inválido. Verifique o endereço digitado.';
         if (msg.includes('signup is disabled'))
