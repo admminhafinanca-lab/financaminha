@@ -4742,21 +4742,27 @@
 
             if (msgLogin.includes('Email not confirmed')) {
               // Caso 1a: cadastrado mas e-mail não confirmado ainda
-              setAuthMsg(
+              const el = document.getElementById('auth-msg');
+              el.innerHTML =
                 '⚠️ Este e-mail já foi cadastrado mas ainda não foi confirmado. ' +
-                'Verifique sua caixa de entrada (e a pasta de spam). ' +
-                '<br><a href="#" onclick="reenviarConfirmacao(\'' + email + '\')" ' +
-                'style="color:var(--acc);text-decoration:underline;">Reenviar e-mail de confirmação</a>',
-                true
-              );
+                'Verifique sua caixa de entrada (e a pasta de spam).<br>' +
+                '<a href="#" id="link-reenviar" style="color:var(--acc);text-decoration:underline;">Reenviar e-mail de confirmação</a>';
+              el.style.color = 'var(--red)';
+              document.getElementById('link-reenviar').onclick = (e) => {
+                e.preventDefault();
+                reenviarConfirmacao(email);
+              };
             } else {
               // Caso 1b: cadastrado e confirmado — direciona para login
-              setAuthMsg(
+              const el = document.getElementById('auth-msg');
+              el.innerHTML =
                 '⚠️ Este e-mail já possui cadastro. ' +
-                '<a href="#" onclick="authTab('login')" ' +
-                'style="color:var(--acc);text-decoration:underline;">Clique aqui para entrar</a>',
-                true
-              );
+                '<a href="#" id="link-ir-login" style="color:var(--acc);text-decoration:underline;">Clique aqui para entrar</a>';
+              el.style.color = 'var(--red)';
+              document.getElementById('link-ir-login').onclick = (e) => {
+                e.preventDefault();
+                authTab('login');
+              };
             }
             return;
           }
