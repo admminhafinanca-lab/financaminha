@@ -4905,10 +4905,12 @@
       }
 
       async function doLogout() {
-        // Remove token de sessão ativa do banco
-        if (_currentUser) {
-          await _sb.from('active_sessions').delete().eq('user_id', _currentUser.id);
-        }
+        try {
+          // Remove token de sessão ativa do banco (ignora erro se tabela não existe)
+          if (_currentUser) {
+            await _sb.from('active_sessions').delete().eq('user_id', _currentUser.id);
+          }
+        } catch (e) { /* ignora */ }
         await _sb.auth.signOut();
         location.reload();
       }
@@ -5496,4 +5498,3 @@
   </div>
 
 </body>
-  
