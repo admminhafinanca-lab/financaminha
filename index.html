@@ -4688,6 +4688,30 @@
       const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       let _currentUser = null;
 
+      // ── Verifica compra na Cakto via Edge Function ──
+      async function verificarCompraCakto(email) {
+        try {
+          const res = await fetch(
+            SUPABASE_URL + '/functions/v1/smooth-handler',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+              },
+              body: JSON.stringify({ email: email.trim().toLowerCase() }),
+            }
+          );
+          if (!res.ok) throw new Error('Erro na verificação');
+          const data = await res.json();
+          return data.allowed === true;
+        } catch (err) {
+          console.error('verificarCompraCakto:', err);
+          // Em caso de erro na API, bloqueia por segurança
+          return false;
+        }
+      }
+
       // ── Auth helpers ──
       function authTab(tab) {
         const isLogin = tab === 'login';
@@ -4751,6 +4775,19 @@
         setAuthMsg('');
 
         try {
+          // ── Verifica se o e-mail tem compra aprovada na Cakto ──
+          setBtnLoading('btn-signup', true, 'Verificando compra…');
+          const temCompra = await verificarCompraCakto(email);
+          if (!temCompra) {
+            setAuthMsg(
+              '🔒 Acesso não encontrado.<br>' +
+              '<span style="font-size:12px;color:var(--muted);">Este e-mail não possui uma compra ativa do FinançaMinha. ' +
+              'Adquira o produto para criar sua conta.</span>'
+            );
+            return;
+          }
+          setBtnLoading('btn-signup', true, 'Criando conta…');
+
           const { data, error } = await _sb.auth.signUp({
             email, password: pass,
             options: { data: { full_name: name } }
@@ -5459,3 +5496,4 @@
   </div>
 
 </body>
+  
