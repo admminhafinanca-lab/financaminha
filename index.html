@@ -1551,7 +1551,7 @@
         <button class="nav-btn-admin" id="btn-open-admin" onclick="openAdminModal()">
           ⚙️ &nbsp;Configurações Admin
         </button>
-        <button class="nav-btn" onclick="doLogout()" style="color:var(--red);margin-top:.5rem;"><span
+        <button class="nav-btn" id="btn-logout" style="color:var(--red);margin-top:.5rem;"><span
             class="nav-icon">🚪</span>Sair da conta</button>
         <div style="font-size:11px;color:var(--dim);padding:4px 10px;margin-bottom:.5rem;" id="sidebar-user-email">
         </div>
@@ -5440,6 +5440,12 @@
       // ══════════════════════════════════════════
 
       document.addEventListener('DOMContentLoaded', async () => {
+        // Logout — event listener para compatibilidade com Safari
+        const btnLogout = document.getElementById('btn-logout');
+        if (btnLogout) {
+          btnLogout.addEventListener('click', function() { doLogout(); });
+        }
+
         // Se URL tem token de recovery, não faz login automático — espera o onAuthStateChange abrir o modal
         if (window.location.hash.includes('type=recovery')) {
           document.getElementById('auth-screen').style.display = 'flex';
