@@ -252,6 +252,38 @@
     }
     .meta-cal-clear:hover { border-color: var(--red); color: var(--red); }
 
+    /* ── MODAL NOVA SENHA ── */
+    #reset-pass-modal {
+      display: none; position: fixed; inset: 0; z-index: 3000;
+      background: rgba(0,0,0,.75); backdrop-filter: blur(6px);
+      align-items: center; justify-content: center; padding: 1rem;
+    }
+    #reset-pass-modal.open { display: flex; }
+    .reset-box {
+      background: var(--s1); border: 1px solid var(--b2); border-radius: 16px;
+      padding: 2rem; width: 100%; max-width: 400px;
+      display: flex; flex-direction: column; gap: 1rem;
+      animation: modalIn .2s cubic-bezier(.4,0,.2,1);
+    }
+    .reset-title { font-family: var(--ff); font-size: 18px; font-weight: 700; }
+    .reset-sub { font-size: 12px; color: var(--muted); margin-top: -6px; }
+    .reset-field { display: flex; flex-direction: column; gap: 6px; }
+    .reset-field label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .reset-field input {
+      background: var(--s2); border: 1px solid var(--b1); border-radius: var(--radius-sm);
+      color: var(--text); font-family: var(--fb); font-size: 14px;
+      padding: 10px 12px; outline: none; transition: border-color .15s;
+    }
+    .reset-field input:focus { border-color: var(--acc); }
+    #reset-msg { font-size: 12px; min-height: 18px; text-align: center; }
+    .btn-reset-confirm {
+      width: 100%; padding: 12px; background: var(--acc); color: #09090d;
+      border: none; border-radius: var(--radius-sm); font-family: var(--fb);
+      font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s;
+    }
+    .btn-reset-confirm:hover { opacity: .88; }
+    .btn-reset-confirm:disabled { opacity: .4; cursor: default; }
+
     /* ── ADMIN MODAL ── */
     #admin-modal {
       display: none; position: fixed; inset: 0; z-index: 2000;
@@ -4811,9 +4843,28 @@
       async function doForgotPassword() {
         const email = document.getElementById('auth-email').value.trim();
         if (!email) { setAuthMsg('Informe o e-mail no campo acima.'); return; }
-        const { error } = await _sb.auth.resetPasswordForEmail(email);
-        if (error) setAuthMsg(traduzErroAuth(error.message));
-        else setAuthMsg('✅ Link de redefinição enviado para ' + email, false);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          setAuthMsg('E-mail inválido. Verifique o endereço digitado.');
+          return;
+        }
+
+        const btnForgot = document.querySelector('button[onclick="doForgotPassword()"]');
+        if (btnForgot) { btnForgot.disabled = true; btnForgot.textContent = 'Enviando…'; }
+
+        const redirectTo = window.location.origin + window.location.pathname;
+        const { error } = await _sb.auth.resetPasswordForEmail(email, {
+          redirectTo: redirectTo
+        });
+
+        if (btnForgot) { btnForgot.disabled = false; btnForgot.textContent = 'Esqueci minha senha'; }
+
+        if (error) {
+          const m = traduzErroAuth(error.message, null, null);
+          if (m) setAuthMsg(m);
+        } else {
+          setAuthMsg('');
+          showToast('📧 Link enviado para ' + email + ' — verifique o spam!', 'green');
+        }
       }
 
       async function doLogout() {
@@ -5118,6 +5169,102 @@
       }
 
 
+
+      // ══════════════════════════════════════════
+      //  RESET DE SENHA
+      // ══════════════════════════════════════════
+      function openResetModal() {
+        document.getElementById('reset-pass-modal').classList.add('open');
+        document.getElementById('reset-new-pass').focus();
+      }
+
+      function closeResetModal() {
+        document.getElementById('reset-pass-modal').classList.remove('open');
+      }
+
+      function validateResetPass() {
+        const p1  = document.getElementById('reset-new-pass').value;
+        const p2  = document.getElementById('reset-confirm-pass').value;
+        const msg = document.getElementById('reset-msg');
+        const btn = document.getElementById('btn-reset-confirm');
+        if (p1.length > 0 && p1.length < 6) {
+          msg.textContent = 'Senha deve ter pelo menos 6 caracteres.';
+          msg.style.color = 'var(--red)';
+          btn.disabled = true;
+        } else if (p2.length > 0 && p1 !== p2) {
+          msg.textContent = 'As senhas não coincidem.';
+          msg.style.color = 'var(--red)';
+          btn.disabled = true;
+        } else {
+          msg.textContent = '';
+          btn.disabled = false;
+        }
+      }
+
+      async function doResetPassword() {
+        const p1 = document.getElementById('reset-new-pass').value;
+        const p2 = document.getElementById('reset-confirm-pass').value;
+        const msg = document.getElementById('reset-msg');
+        const btn = document.getElementById('btn-reset-confirm');
+
+        if (p1.length < 6) {
+          msg.textContent = 'Senha deve ter pelo menos 6 caracteres.';
+          msg.style.color = 'var(--red)'; return;
+        }
+        if (p1 !== p2) {
+          msg.textContent = 'As senhas não coincidem.';
+          msg.style.color = 'var(--red)'; return;
+        }
+
+        btn.disabled = true; btn.textContent = 'Salvando…';
+        const { error } = await _sb.auth.updateUser({ password: p1 });
+
+        if (error) {
+          msg.innerHTML = traduzErroAuth(error.message) || error.message;
+          msg.style.color = 'var(--red)';
+          btn.disabled = false; btn.textContent = 'Salvar nova senha';
+        } else {
+          msg.innerHTML = '✅ Senha alterada com sucesso!';
+          msg.style.color = 'var(--green)';
+          btn.textContent = 'Salvar nova senha';
+          setTimeout(() => {
+            closeResetModal();
+            // Limpa os campos
+            document.getElementById('reset-new-pass').value = '';
+            document.getElementById('reset-confirm-pass').value = '';
+            msg.textContent = '';
+            btn.disabled = false;
+          }, 1800);
+        }
+      }
+
+      // Intercepta o retorno do link de reset
+      let _recoverySession = false;
+      _sb.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          _recoverySession = true;
+          // Garante que a tela de auth está visível antes de abrir o modal
+          document.getElementById('auth-screen').style.display = 'flex';
+          document.getElementById('app-wrapper').style.display = 'none';
+          // Pequeno delay para o DOM estar pronto
+          setTimeout(() => openResetModal(), 100);
+        }
+        if (event === 'SIGNED_IN' && session && !_recoverySession) {
+          // Login normal — fluxo padrão
+          await onAuthSuccess(session.user);
+        }
+      });
+
+      // Checa no boot se a URL tem token de recovery (para quando o evento já disparou)
+      (async () => {
+        const hash = window.location.hash;
+        if (hash.includes('type=recovery') || hash.includes('type=magiclink')) {
+          _recoverySession = true;
+          // O onAuthStateChange vai capturar e abrir o modal
+        }
+      })();
+      // ══════════════════════════════════════════
+
       // ══════════════════════════════════════════
       //  ADMIN MODAL — integrado ao app
       // ══════════════════════════════════════════
@@ -5254,6 +5401,12 @@
       // ══════════════════════════════════════════
 
       document.addEventListener('DOMContentLoaded', async () => {
+        // Se URL tem token de recovery, não faz login automático — espera o onAuthStateChange abrir o modal
+        if (window.location.hash.includes('type=recovery')) {
+          document.getElementById('auth-screen').style.display = 'flex';
+          return;
+        }
+
         // Verifica se há sessão ativa no Supabase
         const { data: { session } } = await _sb.auth.getSession();
         if (session && session.user) {
@@ -5264,6 +5417,30 @@
         }
       });
     </script>
+
+
+  <!-- ══ MODAL NOVA SENHA ══ -->
+  <div id="reset-pass-modal">
+    <div class="reset-box">
+      <div class="reset-title">🔑 Nova senha</div>
+      <div class="reset-sub">Escolha uma nova senha para sua conta.</div>
+      <div class="reset-field">
+        <label>Nova senha</label>
+        <input id="reset-new-pass" type="password" placeholder="mínimo 6 caracteres"
+          oninput="validateResetPass()">
+      </div>
+      <div class="reset-field">
+        <label>Confirmar senha</label>
+        <input id="reset-confirm-pass" type="password" placeholder="repita a senha"
+          onkeydown="if(event.key==='Enter')doResetPassword()"
+          oninput="validateResetPass()">
+      </div>
+      <div id="reset-msg"></div>
+      <button class="btn-reset-confirm" id="btn-reset-confirm" onclick="doResetPassword()">
+        Salvar nova senha
+      </button>
+    </div>
+  </div>
 
   <!-- ══ ADMIN MODAL ══ -->
   <div id="admin-modal" onclick="adminModalBgClick(event)">
