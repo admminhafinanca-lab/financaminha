@@ -1553,6 +1553,19 @@
         <button class="nav-btn-admin" id="btn-open-admin" onclick="openAdminModal()">
           ⚙️ &nbsp;Configurações Admin
         </button>
+        <button id="btn-open-tour" onclick="showTour()" style="
+          margin-top:.25rem;
+          background:rgba(96,165,250,.06);
+          border:1px solid rgba(96,165,250,.15);
+          border-radius:var(--radius-sm);
+          color:var(--blue);
+          font-family:var(--fb); font-size:13px;
+          padding:8px 10px; cursor:pointer;
+          width:100%; text-align:left;
+          transition:all .15s;
+        " onmouseover="this.style.background='rgba(96,165,250,.12)'" onmouseout="this.style.background='rgba(96,165,250,.06)'">
+          🗺️ &nbsp;Tour do sistema
+        </button>
         <div class="sidebar-spacer"></div>
         <div class="sidebar-tip">
           <strong>Dica</strong>
@@ -2197,6 +2210,40 @@
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:1rem;margin-bottom:1.5rem;text-align:left" id="ob-resumo-items"></div>
         <button onclick="obFinalizar()" style="width:100%;padding:14px;background:var(--acc);color:#09090d;border:none;border-radius:10px;font-size:15px;font-weight:700;font-family:var(--fb);cursor:pointer;">Começar a usar →</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL: TOUR DO SISTEMA ══ -->
+  <div id="tour-modal" style="display:none;position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:16px;">
+    <div style="background:var(--s1);border:1px solid var(--b2);border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:1.75rem;">
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;">
+        <div style="font-family:var(--ff);font-size:17px;font-weight:700;color:var(--acc);flex:1;">FinançaMinha</div>
+        <div id="tour-step-label" style="font-size:12px;color:var(--muted);">1 de 14</div>
+        <button onclick="closeTour()" style="background:none;border:1px solid var(--b1);border-radius:7px;color:var(--muted);font-size:14px;padding:4px 10px;cursor:pointer;font-family:var(--fb);">✕</button>
+      </div>
+
+      <!-- Barra de progresso -->
+      <div style="background:var(--s3);border-radius:99px;height:3px;margin-bottom:1.5rem;overflow:hidden;">
+        <div id="tour-prog-fill" style="height:100%;background:var(--acc);border-radius:99px;transition:width .4s cubic-bezier(.4,0,.2,1);width:7%;"></div>
+      </div>
+
+      <!-- Conteúdo do step -->
+      <div id="tour-step-content"></div>
+
+      <!-- Navegação -->
+      <div style="display:flex;align-items:center;gap:10px;margin-top:1.25rem;">
+        <button id="tour-btn-prev" onclick="tourPrev()" disabled style="display:flex;align-items:center;gap:5px;padding:9px 16px;border:1px solid var(--b1);border-radius:8px;background:none;color:var(--muted);font-family:var(--fb);font-size:13px;cursor:pointer;transition:all .15s;" onmouseover="if(!this.disabled)this.style.background='var(--s2)'" onmouseout="this.style.background='none'">← Anterior</button>
+        <div id="tour-dots" style="display:flex;gap:5px;align-items:center;flex:1;justify-content:center;flex-wrap:wrap;"></div>
+        <button id="tour-btn-next" onclick="tourNext()" style="display:flex;align-items:center;gap:5px;padding:9px 16px;border:none;border-radius:8px;background:var(--acc);color:#09090d;font-family:var(--fb);font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Próximo →</button>
+      </div>
+
+      <!-- Pular -->
+      <div style="text-align:center;margin-top:.875rem;">
+        <button onclick="tourGoStep(TOUR_STEPS.length-1)" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:var(--fb);">Pular para o fim</button>
+      </div>
+
     </div>
   </div>
 
@@ -4638,6 +4685,229 @@
         initApp();
         debounceAutoSave();
         showToast(`🎉 Bem-vindo ao FinançaMinha, ${nome || 'usuário'}!`, 'green');
+        // Abre o tour logo após o onboarding
+        setTimeout(() => showTour(), 500);
+      }
+
+      // ══════════════════════════════════════════
+      //  🗺️  TOUR DO SISTEMA
+      // ══════════════════════════════════════════
+      const TOUR_STEPS = [
+        {
+          icon: '📊', tag: 'Visão geral', title: 'Dashboard',
+          sub: 'Panorama completo da sua vida financeira',
+          body: 'O dashboard é sua central de controle. Assim que você cadastrar seus dados, ele exibe automaticamente os indicadores mais importantes: renda total, despesas, saldo livre e projeção dos próximos 12 meses.',
+          features: ['Métricas de renda, despesas e saldo em tempo real','Gráficos de distribuição e categorias','Projeção acumulada dos próximos 12 meses','Vencimentos do mês em destaque'],
+          tip: 'Comece sempre aqui para ter uma visão geral antes de ajustar qualquer categoria.',
+          page: 'dashboard'
+        },
+        {
+          icon: '💵', tag: 'Visão geral', title: 'Saldo do mês',
+          sub: 'O que sobra depois de pagar tudo',
+          body: 'Esta tela calcula automaticamente quanto dinheiro sobra após todas as despesas. Também mostra uma distribuição sugerida para o saldo livre — quanto guardar, investir e usar livremente.',
+          features: ['Saldo livre estimado em destaque','Distribuição sugerida do saldo','Resumo de vencimentos por período (dia 5, 15, 20)','Detalhamento de cada item que compõe o saldo'],
+          tip: 'O saldo negativo aparece em vermelho. Nesse caso, revise suas despesas não essenciais primeiro.',
+          page: 'saldo'
+        },
+        {
+          icon: '💰', tag: 'Entradas', title: 'Rendas',
+          sub: 'Cadastre todas as suas fontes de renda',
+          body: 'Aqui você registra salário, freelances, aluguéis e qualquer outra entrada financeira. Cada renda pode ter uma data de recebimento e ser vinculada a um membro da família.',
+          features: ['Múltiplas fontes de renda por membro','Data de recebimento para controle de fluxo','Métricas totais de renda familiar','Botão "+ Adicionar renda" para cada nova entrada'],
+          tip: 'Cadastre também rendas variáveis estimadas — o sistema ajusta as projeções automaticamente.',
+          page: 'rendas'
+        },
+        {
+          icon: '🎁', tag: 'Entradas', title: 'Benefícios',
+          sub: 'Benefícios que cobrem suas despesas automaticamente',
+          body: 'Informe os benefícios que você recebe da empresa (VA, VR, VT, plano de saúde, etc). O sistema desconta esses valores das despesas correspondentes, mostrando quanto você realmente gasta do próprio bolso.',
+          features: ['Vale Alimentação, Refeição e Transporte','Auxílio home office e plano de saúde','Cobertura automática nas despesas essenciais','Painel de cobertura mostrando quanto cada benefício cobre'],
+          tip: 'Preencha os benefícios antes das despesas para que o cálculo de cobertura seja preciso.',
+          page: 'beneficios'
+        },
+        {
+          icon: '🏠', tag: 'Despesas', title: 'Despesas essenciais',
+          sub: 'Contas que você não pode deixar de pagar',
+          body: 'Registre aluguel, condomínio, luz, água, internet, supermercado, escola e tudo que é indispensável. Cada despesa tem categoria, valor, vencimento, membro responsável e se é fixa ou variável.',
+          features: ['Categorias pré-definidas (moradia, alimentação, saúde...)','Marcar como "Pago" para controle mensal','Tipo fixo (repete todo mês) ou variável (só neste mês)','Resumo por categoria com total geral'],
+          tip: 'Use o campo "vencimento" — o dashboard mostrará alertas quando a data estiver próxima.',
+          page: 'essenciais'
+        },
+        {
+          icon: '🛍️', tag: 'Despesas', title: 'Despesas não essenciais',
+          sub: 'Gastos que podem ser cortados em caso de aperto',
+          body: 'Streaming, academia, restaurantes, lazer — tudo que é desejável mas não essencial fica aqui. Isso ajuda o sistema a sugerir cortes quando o saldo ficar negativo.',
+          features: ['Separação clara entre necessidade e desejo','Identificação dos gastos que podem ser reduzidos','Resumo com total e participação percentual','Mesmo sistema de "Pago" para acompanhar o mês'],
+          tip: 'O sistema usa esta lista para sugerir onde cortar quando as dívidas ou metas precisam de mais recursos.',
+          page: 'nao-essenciais'
+        },
+        {
+          icon: '💳', tag: 'Despesas', title: 'Cartões de crédito',
+          sub: 'Gerencie cartões, benefícios e milhas',
+          body: 'Cadastre seus cartões com bandeira, banco, limite, data de vencimento e fechamento. O sistema monitora o uso, calcula juros e recomenda qual cartão usar para cada tipo de compra.',
+          features: ['Múltiplos cartões com limites individuais','Programa de pontos e cashback','Alerta quando a fatura está próxima do limite','Recomendação automática de melhor cartão por categoria'],
+          tip: 'Taxas de cartão chegam a 400% ao ano. Dívidas no cartão têm prioridade máxima de quitação.',
+          page: 'cartoes'
+        },
+        {
+          icon: '⚠️', tag: 'Financeiro', title: 'Dívidas',
+          sub: 'Estratégia automática de quitação',
+          body: 'Registre todas as dívidas (empréstimos, financiamentos, cartão em atraso). O sistema calcula a estratégia ótima de quitação — bola de neve ou avalanche — sem comprometer suas metas.',
+          features: ['Lista de todas as dívidas com taxa e parcela','Aba de dívidas originadas por cartões','Estratégia automática de quitação','Métricas de impacto no saldo mensal'],
+          tip: 'A aba "Estratégia" mostra a ordem recomendada de quitação com base nas taxas de juros.',
+          page: 'dividas'
+        },
+        {
+          icon: '📈', tag: 'Financeiro', title: 'Investimentos',
+          sub: 'Acompanhe e planeje sua carteira',
+          body: 'Registre seus investimentos (renda fixa, ações, fundos, etc). O sistema calcula a rentabilidade, diversificação e sugere novas aplicações com base na sua renda e perfil de risco.',
+          features: ['Múltiplos tipos de investimento','Métricas de carteira e rentabilidade','Sugestões baseadas no saldo livre disponível','Integração com a reserva de emergência'],
+          tip: 'Invista somente após quitar dívidas com juros altos. O sistema lembra você disso automaticamente.',
+          page: 'investimentos'
+        },
+        {
+          icon: '👨‍👩‍👧', tag: 'Planejamento', title: 'Família',
+          sub: 'Gerencie membros e custos individuais',
+          body: 'Adicione todos os membros da família (adultos, crianças, idosos). Cada despesa pode ser vinculada a um membro, permitindo ver quanto o sistema custa por pessoa.',
+          features: ['Perfis individuais por membro','Tipo de membro (adulto, criança, bebê, idoso)','Despesas vinculadas por membro','Custo mensal detalhado por pessoa'],
+          tip: 'Vincule as despesas das crianças a elas próprias para calcular o custo real de cada filho.',
+          page: 'familia'
+        },
+        {
+          icon: '🎯', tag: 'Planejamento', title: 'Valores ideais',
+          sub: 'Compare seu orçamento com referências saudáveis',
+          body: 'Esta tela mostra como seu orçamento atual se compara com proporções financeiramente saudáveis (regra 50/30/20 e similares), apontando onde você está acima ou abaixo do ideal.',
+          features: ['Comparativo visual com valores de referência','Indicador de saúde financeira geral','Sugestões de reequilíbrio por categoria','Baseado na sua renda real cadastrada'],
+          tip: 'Use como guia, não como lei. Cada família tem suas prioridades.',
+          page: 'ideal'
+        },
+        {
+          icon: '🛡️', tag: 'Planejamento', title: 'Reserva de emergência',
+          sub: 'Quanto você precisa guardar',
+          body: 'Com base nas suas despesas essenciais, o sistema calcula o valor ideal da sua reserva de emergência (normalmente 3 a 6 meses de despesas). Informe quanto já tem guardado e acompanhe o progresso.',
+          features: ['Cálculo automático do valor ideal','Campo para informar o saldo atual','Barra de progresso visual','Sugestão de quanto guardar por mês'],
+          tip: 'A reserva de emergência tem prioridade sobre investimentos de longo prazo.',
+          page: 'emergencia'
+        },
+        {
+          icon: '📅', tag: 'Planejamento', title: 'Plano de quitação',
+          sub: 'Calendário para zerar suas dívidas',
+          body: 'Com base no seu saldo livre, o sistema cria um plano mensal detalhado para quitar todas as dívidas. Você visualiza mês a mês quando cada dívida será encerrada.',
+          features: ['Cronograma visual de quitação','Data estimada de quitação por dívida','Impacto do saldo extra nas dívidas','Recalcula automaticamente ao alterar dívidas'],
+          tip: 'Pequenos aportes extras aceleram muito o plano. Experimente ajustar o saldo livre disponível.',
+          page: 'plano'
+        },
+        {
+          icon: '🔮', tag: 'Planejamento', title: 'Projeção mensal',
+          sub: 'Simulador financeiro dos próximos meses',
+          body: 'Visualize como sua situação financeira evolui nos próximos 12 meses considerando renda, despesas fixas, aportes em metas e pagamento de dívidas.',
+          features: ['Gráfico de projeção acumulada','Cenários com diferentes taxas de reajuste','Impacto das metas no fluxo de caixa','Alerta de meses com saldo projetado negativo'],
+          tip: 'Use o simulador antes de assumir novas dívidas para ver o impacto real no seu orçamento.',
+          page: 'projecao'
+        },
+        {
+          icon: '🏆', tag: 'Planejamento', title: 'Metas financeiras',
+          sub: 'Sonhos com prazo e progresso visível',
+          body: 'Cadastre suas metas (viagem, veículo, imóvel, reserva...) com valor total, prazo e prioridade. Faça aportes mensais e acompanhe o progresso com barras e datas estimadas de conclusão.',
+          features: ['Categorias com ícones (viagem, educação, saúde...)','Prioridade alta, média e baixa','Aporte manual ou por valor fixo mensal','Progresso em % com data estimada de conclusão'],
+          tip: 'Metas com prazo definido ganham uma barra de urgência — o sistema avisa quando o ritmo está lento.',
+          page: 'metas'
+        }
+      ];
+
+      let _tourStep = 0;
+
+      function showTour() {
+        _tourStep = 0;
+        document.getElementById('tour-modal').style.display = 'flex';
+        _tourRender();
+      }
+
+      function closeTour() {
+        document.getElementById('tour-modal').style.display = 'none';
+      }
+
+      function tourNext() {
+        if (_tourStep < TOUR_STEPS.length - 1) { _tourStep++; _tourRender(); }
+        else { closeTour(); }
+      }
+
+      function tourPrev() {
+        if (_tourStep > 0) { _tourStep--; _tourRender(); }
+      }
+
+      function tourGoStep(i) { _tourStep = i; _tourRender(); }
+
+      function _tourRender() {
+        const s = TOUR_STEPS[_tourStep];
+        const total = TOUR_STEPS.length;
+        const isLast = _tourStep === total - 1;
+
+        document.getElementById('tour-prog-fill').style.width = ((_tourStep + 1) / total * 100) + '%';
+        document.getElementById('tour-step-label').textContent = (_tourStep + 1) + ' de ' + total;
+
+        const isFinish = _tourStep === total - 1;
+
+        if (isFinish) {
+          // Tela de conclusão
+          const miniItems = TOUR_STEPS.map(t =>
+            `<div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);">
+              <span style="font-size:15px;">${t.icon}</span>${t.title}
+            </div>`
+          ).join('');
+          document.getElementById('tour-step-content').innerHTML = `
+            <div style="text-align:center;padding:.5rem 0 1rem;">
+              <div style="font-size:42px;margin-bottom:.75rem;">🎉</div>
+              <div style="font-family:var(--ff);font-size:20px;font-weight:700;margin-bottom:.5rem;">Você está pronto!</div>
+              <div style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:1.25rem;">Agora você conhece todas as 14 seções do FinançaMinha. Comece pelo cadastro de rendas e despesas para o dashboard ganhar vida.</div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem;">Seções do sistema</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:7px;">${miniItems}</div>
+          `;
+          document.getElementById('tour-btn-next').textContent = 'Fechar ✓';
+          document.getElementById('tour-btn-next').style.background = 'var(--green)';
+        } else {
+          const featHtml = s.features
+            ? s.features.map(f => `<div style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--b0);">
+                <span style="color:var(--green);flex-shrink:0;margin-top:1px;">✓</span>${f}
+              </div>`).join('')
+            : '';
+
+          document.getElementById('tour-step-content').innerHTML = `
+            <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:1.1rem;">
+              <div style="width:46px;height:46px;border-radius:10px;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${s.icon}</div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;">${s.tag}</div>
+                <div style="font-family:var(--ff);font-size:17px;font-weight:700;color:var(--text);margin-bottom:2px;">${s.title}</div>
+                <div style="font-size:13px;color:var(--muted);">${s.sub}</div>
+              </div>
+            </div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:.875rem;">${s.body}</div>
+            ${featHtml ? `<div style="margin-bottom:.875rem;">${featHtml}</div>` : ''}
+            <div style="background:var(--s2);border-left:3px solid var(--acc);border-radius:0 8px 8px 0;padding:.75rem 1rem;margin-top:.5rem;">
+              <span style="font-size:13px;color:var(--text);font-weight:500;">Dica:</span>
+              <span style="font-size:13px;color:var(--muted);"> ${s.tip}</span>
+            </div>
+          `;
+          document.getElementById('tour-btn-next').textContent = 'Próximo →';
+          document.getElementById('tour-btn-next').style.background = 'var(--acc)';
+        }
+
+        // Dots
+        const dotsEl = document.getElementById('tour-dots');
+        dotsEl.innerHTML = '';
+        TOUR_STEPS.forEach((_, i) => {
+          const d = document.createElement('div');
+          d.style.cssText = `width:${i === _tourStep ? '20px' : '7px'};height:7px;border-radius:99px;background:${i === _tourStep ? 'var(--acc)' : i < _tourStep ? 'var(--green)' : 'var(--s4)'};transition:all .2s;cursor:pointer;flex-shrink:0;`;
+          d.onclick = () => tourGoStep(i);
+          d.title = 'Passo ' + (i + 1);
+          dotsEl.appendChild(d);
+        });
+
+        const btnPrev = document.getElementById('tour-btn-prev');
+        btnPrev.disabled = _tourStep === 0;
+        btnPrev.style.opacity = _tourStep === 0 ? '.35' : '1';
+        btnPrev.style.cursor = _tourStep === 0 ? 'default' : 'pointer';
       }
 
       // ══════════════════════════════════════════
