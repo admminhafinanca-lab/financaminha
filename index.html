@@ -2118,7 +2118,13 @@
     background:var(--s1); border-top:1px solid var(--b0);
     padding:.75rem .875rem; display:none; flex-direction:column; gap:4px;
   ">
-    <div style="font-size:11px;color:var(--dim);padding:0 2px 2px;" id="sidebar-user-email"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:2px 2px 4px;">
+      <div id="sidebar-user-avatar" style="width:28px;height:28px;border-radius:50%;background:rgba(200,255,87,.15);display:flex;align-items:center;justify-content:center;font-family:var(--ff);font-size:11px;font-weight:700;color:var(--acc);flex-shrink:0;"></div>
+      <div style="min-width:0;flex:1;">
+        <div id="sidebar-user-name" style="font-size:13px;font-weight:600;color:var(--text);font-family:var(--ff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+        <div id="sidebar-user-email" style="font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+      </div>
+    </div>
     <button id="btn-logout" onclick="doLogout()" style="
       width:100%; background:none; border:1px solid rgba(248,113,113,.2);
       border-radius:8px; color:var(--red); font-family:var(--fb); font-size:13px;
@@ -2630,6 +2636,8 @@
             const avatar = card.querySelector('div[style*="border-radius:50%"]');
             if (avatar) avatar.textContent = ini;
           }
+          // Atualiza nome na sidebar se for o titular (primeiro membro)
+          if (state.membros[0]?.id === id) updateSidebarUser();
         }
         renderFamiliaTotais();
         debounceAutoSave();
@@ -5253,6 +5261,18 @@
       }
 
       // ── Após login bem-sucedido ──
+      function updateSidebarUser() {
+        const nome = state.membros?.[0]?.nome || _currentUser?.user_metadata?.full_name || '';
+        const email = _currentUser?.email || '';
+        const ini = (nome.split(' ').map(w => w[0] || '').join('').toUpperCase() || '?').slice(0, 2);
+        const nameEl = document.getElementById('sidebar-user-name');
+        const emailEl = document.getElementById('sidebar-user-email');
+        const avatarEl = document.getElementById('sidebar-user-avatar');
+        if (nameEl) nameEl.textContent = nome || email;
+        if (emailEl) emailEl.textContent = nome ? email : '';
+        if (avatarEl) avatarEl.textContent = ini;
+      }
+
       async function onAuthSuccess(user) {
         // Bloqueia acesso se e-mail não foi confirmado
         if (!user.email_confirmed_at) {
@@ -5264,9 +5284,16 @@
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('app-wrapper').style.display = 'block';
         document.getElementById('sidebar-footer').style.display = 'flex';
-        // Exibe e-mail na sidebar
+        // Exibe email provisório enquanto carrega o state
         const emailEl = document.getElementById('sidebar-user-email');
         if (emailEl) emailEl.textContent = user.email;
+        const nameEl = document.getElementById('sidebar-user-name');
+        if (nameEl) nameEl.textContent = user.user_metadata?.full_name || user.email;
+        const avatarEl = document.getElementById('sidebar-user-avatar');
+        if (avatarEl) {
+          const n = user.user_metadata?.full_name || user.email || '';
+          avatarEl.textContent = (n.split(' ').map(w => w[0]||'').join('').toUpperCase()||'?').slice(0,2);
+        }
         // Inicia heartbeat de sessão única
         startSessionHeartbeat();
         // ── Carrega configurações globais do banco ANTES de tudo ──
@@ -5275,6 +5302,8 @@
         await checkAdminRole(user);
         // Carrega dados do usuário
         await loadStateFromSupabase();
+        // Atualiza nome com o do state (membro titular)
+        updateSidebarUser();
         // Inicializa o app
         initApp();
       }
@@ -5722,16 +5751,6 @@
       // ══════════════════════════════════════════
 
       document.addEventListener('DOMContentLoaded', async () => {
-        // Logout — event listener para compatibilidade com Safari
-        const btnLogout = document.getElementById('btn-logout');
-        if (btnLogout) {
-          btnLogout.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            doLogout();
-          });
-        }
-
         // Se URL tem token de recovery, não faz login automático — espera o onAuthStateChange abrir o modal
         if (window.location.hash.includes('type=recovery')) {
           document.getElementById('auth-screen').style.display = 'flex';
