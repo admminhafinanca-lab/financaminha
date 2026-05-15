@@ -5195,9 +5195,9 @@
         }
       }
 
-      function doLogout() {
-        try { _sb.auth.signOut(); } catch(e) {}
-        setTimeout(function() { window.location.href = window.location.pathname; }, 300);
+      async function doLogout() {
+        try { await _sb.auth.signOut(); } catch(e) { console.error("signOut error", e); }
+        window.location.href = window.location.pathname;
       }
 
       // ── Controle de sessão única ──
