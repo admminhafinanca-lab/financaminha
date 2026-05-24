@@ -1549,6 +1549,7 @@
         <button class="nav-btn" onclick="nav('plano',this)"><span class="nav-icon">📅</span>Plano quitação</button>
         <button class="nav-btn" onclick="nav('projecao',this)"><span class="nav-icon">🔮</span>Projeção mensal</button>
         <button class="nav-btn" onclick="nav('metas',this)"><span class="nav-icon">🏆</span>Metas financeiras</button>
+        <button class="nav-btn" onclick="nav('calendario',this)"><span class="nav-icon">🗓️</span>Calendário</button>
 
         <button class="nav-btn-admin" id="btn-open-admin" onclick="openAdminModal()">
           ⚙️ &nbsp;Configurações Admin
@@ -2002,6 +2003,32 @@
           </div>
           <div id="proj-resumo" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:1.5rem;"></div>
           <div id="proj-tabela"></div>
+        </div>
+
+        <!-- ══ CALENDÁRIO ══ -->
+        <div class="page" id="page-calendario">
+          <div class="page-head">
+            <div class="page-title">Calendário financeiro</div>
+            <div class="page-sub">Linha do tempo mensal de entradas, despesas e vencimentos</div>
+          </div>
+
+          <!-- Navegação de mês -->
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap;">
+            <button onclick="calNavMes(-1)" style="background:var(--s2);border:1px solid var(--b2);border-radius:8px;padding:7px 14px;color:var(--text);font-size:14px;cursor:pointer;font-family:var(--fb);">← Anterior</button>
+            <div id="cal-mes-label" style="font-size:16px;font-weight:600;color:var(--text);font-family:var(--ff);min-width:160px;text-align:center;"></div>
+            <button onclick="calNavMes(1)" style="background:var(--s2);border:1px solid var(--b2);border-radius:8px;padding:7px 14px;color:var(--text);font-size:14px;cursor:pointer;font-family:var(--fb);">Próximo →</button>
+            <button onclick="calNavMes(0)" style="background:none;border:1px solid var(--b1);border-radius:8px;padding:7px 14px;color:var(--muted);font-size:13px;cursor:pointer;font-family:var(--fb);margin-left:4px;">Hoje</button>
+          </div>
+
+          <!-- Resumo do mês -->
+          <div id="cal-resumo" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.5rem;"></div>
+
+          <!-- Grade do calendário -->
+          <div id="cal-grade" style="background:var(--s1);border:1px solid var(--b1);border-radius:14px;overflow:hidden;margin-bottom:1.75rem;"></div>
+
+          <!-- Linha do tempo -->
+          <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.875rem;">Linha do tempo — eventos do mês</div>
+          <div id="cal-timeline" style="display:flex;flex-direction:column;gap:0;"></div>
         </div>
 
       </main>
@@ -2472,6 +2499,7 @@
         document.getElementById('page-' + id).classList.add('active');
         btn.classList.add('active');
         closeSidebar(); // fecha menu no mobile
+        if (id === 'calendario') { renderCalendario(); return; }
         setTimeout(() => calcular(), 50);
       }
       function openSidebar() {
@@ -4821,6 +4849,14 @@
           features: ['Categorias com ícones (viagem, educação, saúde...)','Prioridade alta, média e baixa','Aporte manual ou por valor fixo mensal','Progresso em % com data estimada de conclusão'],
           tip: 'Metas com prazo definido ganham uma barra de urgência — o sistema avisa quando o ritmo está lento.',
           page: 'metas'
+        },
+        {
+          icon: '🗓️', tag: 'Planejamento', title: 'Calendário financeiro',
+          sub: 'Linha do tempo mensal de entradas e saídas',
+          body: 'Visualize todos os eventos financeiros do mês em uma grade de calendário e em uma linha do tempo cronológica. Cada dia mostra rendas, despesas, vencimentos de dívidas e faturas de cartão.',
+          features: ['Grade mensal com pontos coloridos por tipo','Linha do tempo ordenada por dia','Resumo do mês: entradas, saídas, saldo e pendências','Navegação entre meses passados e futuros'],
+          tip: 'Use o calendário para antecipar meses com muitos vencimentos acumulados e redistribuir despesas variáveis.',
+          page: 'calendario'
         }
       ];
 
@@ -5762,6 +5798,297 @@
           document.getElementById('auth-screen').style.display = 'flex';
         }
       });
+
+      // ══════════════════════════════════════════
+      //  🗓️  CALENDÁRIO FINANCEIRO
+      // ══════════════════════════════════════════
+
+      let _calAno  = new Date().getFullYear();
+      let _calMes  = new Date().getMonth(); // 0-based
+
+      const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                        'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      const DIAS_PT  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+      function calNavMes(delta) {
+        if (delta === 0) { _calAno = new Date().getFullYear(); _calMes = new Date().getMonth(); }
+        else {
+          _calMes += delta;
+          if (_calMes < 0)  { _calMes = 11; _calAno--; }
+          if (_calMes > 11) { _calMes = 0;  _calAno++; }
+        }
+        renderCalendario();
+      }
+
+      // Coleta todos os eventos do mês/ano atual do state
+      function calEventos(ano, mes) {
+        const hoje = new Date();
+        const eventos = [];
+
+        // Rendas
+        (state.rendas || []).forEach(r => {
+          const dia = Math.min(parseInt(r.dia) || 1, 28);
+          eventos.push({
+            dia, tipo: 'renda',
+            label: r.nome || 'Renda',
+            valor: r.valor || 0,
+            membro: (state.membros||[]).find(m=>m.id===r.membro)?.nome || '',
+            pago: false
+          });
+        });
+
+        // Despesas essenciais
+        (state.essenciais || []).forEach(d => {
+          const dia = Math.min(parseInt(d.vencimento||d.dia) || 1, 28);
+          eventos.push({
+            dia, tipo: 'essencial',
+            label: d.nome || 'Despesa essencial',
+            valor: -(d.valor || 0),
+            cat: d.cat || '',
+            pago: !!d.pago,
+            membro: (state.membros||[]).find(m=>m.id===d.membro)?.nome || ''
+          });
+        });
+
+        // Despesas não essenciais
+        (state.naoEssenciais || []).forEach(d => {
+          const dia = Math.min(parseInt(d.vencimento||d.dia) || 1, 28);
+          eventos.push({
+            dia, tipo: 'nao-essencial',
+            label: d.nome || 'Despesa',
+            valor: -(d.valor || 0),
+            cat: d.cat || '',
+            pago: !!d.pago,
+            membro: (state.membros||[]).find(m=>m.id===d.membro)?.nome || ''
+          });
+        });
+
+        // Parcelas de dívidas
+        (state.dividas || []).forEach(d => {
+          const dia = Math.min(parseInt(d.vencimento||d.dia) || 5, 28);
+          eventos.push({
+            dia, tipo: 'divida',
+            label: d.nome || 'Dívida',
+            valor: -(d.parcela || 0),
+            pago: false
+          });
+        });
+
+        // Faturas de cartões
+        (state.cartoes || []).forEach(c => {
+          const dia = Math.min(parseInt(c.vencimento) || 10, 28);
+          eventos.push({
+            dia, tipo: 'cartao',
+            label: (c.nome||'Cartão') + ' — fatura',
+            valor: -(c.limite_usado || 0),
+            pago: false
+          });
+        });
+
+        return eventos.sort((a,b) => a.dia - b.dia);
+      }
+
+      function renderCalendario() {
+        const ano = _calAno, mes = _calMes;
+        const hoje = new Date();
+        const ehMesAtual = ano === hoje.getFullYear() && mes === hoje.getMonth();
+        const diaHoje = ehMesAtual ? hoje.getDate() : -1;
+
+        document.getElementById('cal-mes-label').textContent = MESES_PT[mes] + ' ' + ano;
+
+        const eventos = calEventos(ano, mes);
+
+        // ── Resumo ──
+        let totalEntradas = 0, totalSaidas = 0, totalPago = 0, totalPendente = 0;
+        eventos.forEach(e => {
+          if (e.valor > 0) totalEntradas += e.valor;
+          else totalSaidas += Math.abs(e.valor);
+          if (e.pago) totalPago += Math.abs(e.valor);
+          else if (e.valor < 0) totalPendente += Math.abs(e.valor);
+        });
+        const saldo = totalEntradas - totalSaidas;
+
+        document.getElementById('cal-resumo').innerHTML = `
+          <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:.875rem 1rem;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Entradas previstas</div>
+            <div style="font-size:20px;font-weight:600;color:var(--green);">${fmt(totalEntradas)}</div>
+          </div>
+          <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:.875rem 1rem;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Saídas previstas</div>
+            <div style="font-size:20px;font-weight:600;color:var(--red);">${fmt(totalSaidas)}</div>
+          </div>
+          <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:.875rem 1rem;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Saldo do mês</div>
+            <div style="font-size:20px;font-weight:600;color:${saldo>=0?'var(--green)':'var(--red)'};">${fmt(saldo)}</div>
+          </div>
+          <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:.875rem 1rem;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">A pagar ainda</div>
+            <div style="font-size:20px;font-weight:600;color:var(--yellow);">${fmt(totalPendente)}</div>
+          </div>
+        `;
+
+        // ── Grade do calendário ──
+        const primeiroDia = new Date(ano, mes, 1).getDay();
+        const diasNoMes   = new Date(ano, mes+1, 0).getDate();
+
+        // Indexar eventos por dia
+        const eventosPorDia = {};
+        eventos.forEach(e => {
+          if (!eventosPorDia[e.dia]) eventosPorDia[e.dia] = [];
+          eventosPorDia[e.dia].push(e);
+        });
+
+        let grade = `<div style="display:grid;grid-template-columns:repeat(7,1fr);">`;
+
+        // Cabeçalho dias da semana
+        DIAS_PT.forEach(d => {
+          grade += `<div style="padding:8px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--muted);background:var(--s2);border-bottom:1px solid var(--b1);">${d}</div>`;
+        });
+
+        // Células vazias antes do primeiro dia
+        for (let i = 0; i < primeiroDia; i++) {
+          grade += `<div style="min-height:72px;padding:6px;border-bottom:1px solid var(--b0);border-right:1px solid var(--b0);background:var(--s2);opacity:.4;"></div>`;
+        }
+
+        // Dias do mês
+        for (let dia = 1; dia <= diasNoMes; dia++) {
+          const isHoje = dia === diaHoje;
+          const evs = eventosPorDia[dia] || [];
+          const temRenda = evs.some(e => e.tipo === 'renda');
+          const temDespesa = evs.some(e => e.valor < 0);
+          const col = (primeiroDia + dia - 1) % 7;
+          const borderRight = col < 6 ? '1px solid var(--b0)' : 'none';
+
+          let dots = '';
+          if (temRenda)   dots += `<span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;"></span>`;
+          if (temDespesa) dots += `<span style="width:6px;height:6px;border-radius:50%;background:var(--red);display:inline-block;"></span>`;
+
+          let evHtml = '';
+          evs.slice(0, 2).forEach(e => {
+            const cor = e.tipo === 'renda' ? 'var(--green)' :
+                        e.tipo === 'divida' || e.tipo === 'cartao' ? 'var(--red)' : 'var(--yellow)';
+            const bg  = e.tipo === 'renda' ? 'rgba(34,197,94,.12)' :
+                        e.tipo === 'divida' || e.tipo === 'cartao' ? 'rgba(248,113,113,.12)' : 'rgba(250,204,21,.12)';
+            evHtml += `<div style="font-size:10px;background:${bg};color:${cor};border-radius:3px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${e.label} — ${fmt(Math.abs(e.valor))}">${e.label}</div>`;
+          });
+          if (evs.length > 2) evHtml += `<div style="font-size:10px;color:var(--muted);margin-top:1px;">+${evs.length-2} mais</div>`;
+
+          grade += `
+            <div onclick="calAbrirDia(${dia})" style="min-height:72px;padding:5px 6px;border-bottom:1px solid var(--b0);border-right:${borderRight};cursor:pointer;transition:background .1s;${isHoje?'background:rgba(200,255,87,.07);':''}hover:background:var(--s2);">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+                <span style="font-size:13px;font-weight:${isHoje?'700':'400'};color:${isHoje?'var(--acc)':'var(--text)'};${isHoje?'background:var(--acc);color:#09090d;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;':''}"> ${dia}</span>
+                <div style="display:flex;gap:2px;">${dots}</div>
+              </div>
+              ${evHtml}
+            </div>`;
+        }
+
+        // Células vazias no final
+        const totalCelulas = primeiroDia + diasNoMes;
+        const restante = totalCelulas % 7 === 0 ? 0 : 7 - (totalCelulas % 7);
+        for (let i = 0; i < restante; i++) {
+          grade += `<div style="min-height:72px;padding:6px;border-right:1px solid var(--b0);background:var(--s2);opacity:.4;"></div>`;
+        }
+
+        grade += `</div>`;
+        document.getElementById('cal-grade').innerHTML = grade;
+
+        // ── Linha do tempo ──
+        renderTimeline(eventos, diaHoje);
+      }
+
+      function renderTimeline(eventos, diaHoje) {
+        const el = document.getElementById('cal-timeline');
+        if (!eventos.length) {
+          el.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);font-size:14px;">Nenhum evento cadastrado neste mês.<br>Cadastre rendas e despesas com data de vencimento.</div>`;
+          return;
+        }
+
+        // Agrupar por dia
+        const porDia = {};
+        eventos.forEach(e => {
+          if (!porDia[e.dia]) porDia[e.dia] = [];
+          porDia[e.dia].push(e);
+        });
+
+        const dias = Object.keys(porDia).map(Number).sort((a,b)=>a-b);
+        let html = '';
+
+        dias.forEach((dia, idx) => {
+          const evs = porDia[dia];
+          const passado = diaHoje > 0 && dia < diaHoje;
+          const ehHoje  = dia === diaHoje;
+          const futuro  = diaHoje > 0 && dia > diaHoje;
+
+          const totalDia = evs.reduce((s,e) => s + e.valor, 0);
+          const cor = totalDia >= 0 ? 'var(--green)' : 'var(--red)';
+
+          const isLast = idx === dias.length - 1;
+
+          html += `
+            <div style="display:flex;gap:0;align-items:stretch;">
+              <!-- coluna do marcador -->
+              <div style="display:flex;flex-direction:column;align-items:center;width:40px;flex-shrink:0;">
+                <div style="width:14px;height:14px;border-radius:50%;margin-top:14px;flex-shrink:0;
+                  background:${ehHoje?'var(--acc)':passado?'var(--green)':'var(--s4)'};
+                  border:2px solid ${ehHoje?'var(--acc)':passado?'var(--green)':'var(--b2)'};
+                  ${ehHoje?'box-shadow:0 0 0 3px rgba(200,255,87,.25);':''}">
+                </div>
+                ${!isLast ? `<div style="flex:1;width:2px;background:var(--b1);min-height:16px;"></div>` : ''}
+              </div>
+              <!-- conteúdo -->
+              <div style="flex:1;padding:.625rem .625rem .625rem .5rem;margin-bottom:${isLast?'0':'4px'};">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:13px;font-weight:600;color:${ehHoje?'var(--acc)':'var(--text)'};">
+                      Dia ${dia}${ehHoje?' — hoje':''}
+                    </span>
+                    ${passado?'<span style="font-size:10px;background:rgba(34,197,94,.1);color:var(--green);border-radius:99px;padding:1px 7px;">passado</span>':''}
+                    ${futuro?'<span style="font-size:10px;background:rgba(96,165,250,.1);color:var(--blue);border-radius:99px;padding:1px 7px;">futuro</span>':''}
+                  </div>
+                  <span style="font-size:13px;font-weight:600;color:${cor};">${totalDia>=0?'+':''}${fmt(totalDia)}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  ${evs.map(e => {
+                    const icone = e.tipo==='renda'?'💰':e.tipo==='essencial'?'🏠':e.tipo==='nao-essencial'?'🛍️':e.tipo==='divida'?'⚠️':'💳';
+                    const corV = e.valor>=0?'var(--green)':'var(--red)';
+                    const bg   = e.pago?'rgba(34,197,94,.05)':'var(--s2)';
+                    const border = e.pago?'1px solid rgba(34,197,94,.2)':'1px solid var(--b1)';
+                    return `
+                      <div style="display:flex;align-items:center;justify-content:space-between;background:${bg};border:${border};border-radius:8px;padding:7px 10px;">
+                        <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                          <span style="font-size:15px;flex-shrink:0;">${icone}</span>
+                          <div style="min-width:0;">
+                            <div style="font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.label}</div>
+                            ${e.membro?`<div style="font-size:11px;color:var(--muted);">${e.membro}</div>`:''}
+                          </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                          ${e.pago?'<span style="font-size:10px;color:var(--green);">✓ pago</span>':''}
+                          <span style="font-size:13px;font-weight:600;color:${corV};">${e.valor>=0?'+':''}${fmt(Math.abs(e.valor))}</span>
+                        </div>
+                      </div>`;
+                  }).join('')}
+                </div>
+              </div>
+            </div>`;
+        });
+
+        el.innerHTML = html;
+      }
+
+      function calAbrirDia(dia) {
+        const ano = _calAno, mes = _calMes;
+        const eventos = calEventos(ano, mes).filter(e => e.dia === dia);
+        if (!eventos.length) return;
+        const nomeMes = MESES_PT[mes];
+        let txt = `📅 ${dia} de ${nomeMes} de ${ano}\n\n`;
+        eventos.forEach(e => {
+          const sinal = e.valor >= 0 ? '+' : '';
+          txt += `• ${e.label}: ${sinal}${fmt(Math.abs(e.valor))}${e.pago?' ✓':''}\n`;
+        });
+        showToast(txt.split('\n')[2] || `Dia ${dia}`, 'green');
+      }
     </script>
 
 
