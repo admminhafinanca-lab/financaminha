@@ -5105,6 +5105,7 @@
       }
 
       async function doLogin() {
+        _authSuccessCalled = false; // reset flag para novo login
         const email = document.getElementById('auth-email').value.trim();
         const pass = document.getElementById('auth-pass').value;
         if (!email || !pass) { setAuthMsg('Preencha e-mail e senha.'); return; }
@@ -5306,14 +5307,14 @@
           });
         }
         // Salva o token localmente para validar o heartbeat
-        sessionStorage.setItem('fm_session_token', sessionToken);
+        try { sessionStorage.setItem('fm_session_token', sessionToken); } catch(e) { /* Safari private mode */ }
       }
 
       // ── Heartbeat: verifica a cada 60s se esta é a sessão válida ──
       function startSessionHeartbeat() {
         setInterval(async () => {
           if (!_currentUser) return;
-          const myToken = sessionStorage.getItem('fm_session_token');
+          let myToken; try { myToken = sessionStorage.getItem('fm_session_token'); } catch(e) { return; }
           if (!myToken) return;
           const { data } = await _sb.from('active_sessions')
             .select('session_token')
@@ -5685,6 +5686,7 @@
 
       // Intercepta o retorno do link de reset
       window._recoverySession = window._recoverySession || false;
+      let _authSuccessCalled = false;
       _sb.auth.onAuthStateChange(async (event, session) => {
         if (event === 'PASSWORD_RECOVERY') {
           window._recoverySession = true;
@@ -5695,7 +5697,8 @@
           setTimeout(() => openResetModal(), 100);
         }
         if (event === 'SIGNED_IN' && session && !window._recoverySession) {
-          // Login normal — fluxo padrão
+          if (_authSuccessCalled) return; // evita duplo disparo (Safari)
+          _authSuccessCalled = true;
           await onAuthSuccess(session.user);
         }
       });
@@ -5852,12 +5855,23 @@
           return;
         }
 
-        // Verifica se há sessão ativa no Supabase
-        const { data: { session } } = await _sb.auth.getSession();
-        if (session && session.user) {
-          await onAuthSuccess(session.user);
-        } else {
-          // Sem sessão — mostra tela de login
+        // Aguarda um tick para o onAuthStateChange disparar primeiro (Safari)
+        await new Promise(r => setTimeout(r, 300));
+
+        // Se o onAuthStateChange já tratou o login, não faz nada
+        if (_authSuccessCalled) return;
+
+        // Verifica se há sessão ativa no Supabase (fallback para Safari/cookies bloqueados)
+        try {
+          const { data: { session } } = await _sb.auth.getSession();
+          if (session && session.user && !_authSuccessCalled) {
+            _authSuccessCalled = true;
+            await onAuthSuccess(session.user);
+          } else if (!session) {
+            document.getElementById('auth-screen').style.display = 'flex';
+          }
+        } catch(e) {
+          console.error('[DOMContentLoaded] erro ao verificar sessão:', e);
           document.getElementById('auth-screen').style.display = 'flex';
         }
       });
