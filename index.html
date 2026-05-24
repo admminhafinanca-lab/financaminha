@@ -1549,7 +1549,7 @@
         <button class="nav-btn" onclick="nav('plano',this)"><span class="nav-icon">📅</span>Plano quitação</button>
         <button class="nav-btn" onclick="nav('projecao',this)"><span class="nav-icon">🔮</span>Projeção mensal</button>
         <button class="nav-btn" onclick="nav('metas',this)"><span class="nav-icon">🏆</span>Metas financeiras</button>
-        <button class="nav-btn" onclick="nav('dashboard',document.querySelector('.nav-btn'));setTimeout(()=>{document.getElementById('dash-cal-grade').scrollIntoView({behavior:'smooth',block:'start'})},200)"><span class="nav-icon">🗓️</span>Calendário</button>
+        <button class="nav-btn" onclick="nav('dashboard',document.querySelector('.nav-btn.active')||document.querySelector('.nav-btn'));document.getElementById('dash-cal-grade').scrollIntoView({behavior:'smooth',block:'start'})"><span class="nav-icon">🗓️</span>Calendário</button>
 
         <button class="nav-btn-admin" id="btn-open-admin" onclick="openAdminModal()">
           ⚙️ &nbsp;Configurações Admin
@@ -1602,7 +1602,7 @@
             <div id="dash-vencimentos"></div>
           </div>
 
-          <!-- ── Calendário financeiro no Dashboard ── -->
+          <!-- Calendário no dashboard -->
           <div class="card" style="margin-top:1.25rem;">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.25rem;">
               <div class="card-title" style="margin-bottom:0;">🗓️ Calendário financeiro</div>
@@ -2578,9 +2578,8 @@
         simular();
         document.getElementById('topbar-saldo').textContent = fmt(saldo);
 
-        // Atualiza calendário no dashboard
-        renderDashCalendario();
-
+        // Calendário no dashboard
+        if (document.getElementById('dash-cal-mes-label')) renderDashCalendario();
         // auto-save debounced
         debounceAutoSave();
       }
@@ -6126,18 +6125,6 @@
         el.innerHTML = html;
       }
 
-      function calAbrirDia(dia) {
-        const ano = _calAno, mes = _calMes;
-        const eventos = calEventos(ano, mes).filter(e => e.dia === dia);
-        if (!eventos.length) return;
-        const nomeMes = MESES_PT[mes];
-        let txt = `📅 ${dia} de ${nomeMes} de ${ano}\n\n`;
-        eventos.forEach(e => {
-          const sinal = e.valor >= 0 ? '+' : '';
-          txt += `• ${e.label}: ${sinal}${fmt(Math.abs(e.valor))}${e.pago?' ✓':''}\n`;
-        });
-        showToast(txt.split('\n')[2] || `Dia ${dia}`, 'green');
-      }
 
       // ── CALENDÁRIO NO DASHBOARD ──
       let _dashCalAno = new Date().getFullYear();
@@ -6154,23 +6141,20 @@
       }
 
       function renderDashCalendario() {
-        if (!document.getElementById("dash-cal-mes-label")) return;
+        if (!document.getElementById('dash-cal-mes-label')) return;
         const ano = _dashCalAno, mes = _dashCalMes;
         const hoje = new Date();
         const ehMesAtual = ano === hoje.getFullYear() && mes === hoje.getMonth();
         const diaHoje = ehMesAtual ? hoje.getDate() : -1;
 
-        const labelEl = document.getElementById('dash-cal-mes-label');
-        if (labelEl) labelEl.textContent = MESES_PT[mes] + ' ' + ano;
+        document.getElementById('dash-cal-mes-label').textContent = MESES_PT[mes] + ' ' + ano;
 
         const eventos = calEventos(ano, mes);
-
-        // Resumo
         const totalRenda = eventos.filter(e=>e.tipo==='renda').reduce((s,e)=>s+e.valor,0);
-        const totalDesp   = eventos.filter(e=>e.valor<0).reduce((s,e)=>s+e.valor,0);
-        const saldoMes    = totalRenda + totalDesp;
-        const resumoEl = document.getElementById('dash-cal-resumo');
-        if (resumoEl) resumoEl.innerHTML = `
+        const totalDesp  = eventos.filter(e=>e.valor<0).reduce((s,e)=>s+e.valor,0);
+        const saldoMes   = totalRenda + totalDesp;
+
+        document.getElementById('dash-cal-resumo').innerHTML = `
           <div style="background:var(--s3);border-radius:10px;padding:10px 14px;">
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Entradas</div>
             <div style="font-family:var(--ff);font-size:15px;font-weight:700;color:var(--green);">+${fmt(totalRenda)}</div>
@@ -6188,31 +6172,27 @@
             <div style="font-family:var(--ff);font-size:15px;font-weight:700;color:var(--text);">${eventos.length}</div>
           </div>`;
 
-        // Grade
         const gradeEl = document.getElementById('dash-cal-grade');
-        if (!gradeEl) return;
         const diasNoMes = new Date(ano, mes+1, 0).getDate();
         const primeiroDia = new Date(ano, mes, 1).getDay();
         const eventosPorDia = {};
         eventos.forEach(e => { if(!eventosPorDia[e.dia]) eventosPorDia[e.dia]=[]; eventosPorDia[e.dia].push(e); });
 
-        let grade = `<div style="display:grid;grid-template-columns:repeat(7,1fr);">`;
+        let grade = '<div style="display:grid;grid-template-columns:repeat(7,1fr);">';
         DIAS_PT.forEach(d => {
           grade += `<div style="padding:7px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--muted);background:var(--s3);border-bottom:1px solid var(--b1);">${d}</div>`;
         });
         for (let i=0; i<primeiroDia; i++) {
-          grade += `<div style="min-height:64px;padding:5px;border-bottom:1px solid var(--b0);border-right:1px solid var(--b0);opacity:.3;"></div>`;
+          grade += '<div style="min-height:64px;padding:5px;border-bottom:1px solid var(--b0);border-right:1px solid var(--b0);opacity:.3;"></div>';
         }
         for (let dia=1; dia<=diasNoMes; dia++) {
-          const isHoje = dia === diaHoje;
-          const evs = eventosPorDia[dia] || [];
-          const temRenda   = evs.some(e=>e.tipo==='renda');
-          const temDespesa = evs.some(e=>e.valor<0);
+          const isHoje = dia===diaHoje;
+          const evs = eventosPorDia[dia]||[];
           const col = (primeiroDia+dia-1)%7;
           const borderRight = col<6?'1px solid var(--b0)':'none';
           let dots = '';
-          if (temRenda)   dots += `<span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;"></span>`;
-          if (temDespesa) dots += `<span style="width:5px;height:5px;border-radius:50%;background:var(--red);display:inline-block;"></span>`;
+          if (evs.some(e=>e.tipo==='renda'))  dots += '<span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;"></span>';
+          if (evs.some(e=>e.valor<0))         dots += '<span style="width:5px;height:5px;border-radius:50%;background:var(--red);display:inline-block;"></span>';
           let evHtml = '';
           evs.slice(0,2).forEach(e => {
             const cor = e.tipo==='renda'?'var(--green)':e.tipo==='divida'||e.tipo==='cartao'?'var(--red)':'var(--yellow)';
@@ -6220,39 +6200,25 @@
             evHtml += `<div style="font-size:9px;background:${bg};color:${cor};border-radius:3px;padding:1px 3px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.label}</div>`;
           });
           if (evs.length>2) evHtml += `<div style="font-size:9px;color:var(--muted);margin-top:1px;">+${evs.length-2}</div>`;
-          grade += `
-            <div style="min-height:64px;padding:4px 5px;border-bottom:1px solid var(--b0);border-right:${borderRight};cursor:pointer;transition:background .1s;${isHoje?'background:rgba(200,255,87,.07);':''}">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
-                <span style="font-size:12px;font-weight:${isHoje?'700':'400'};${isHoje?'background:var(--acc);color:#09090d;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;':'color:var(--text);'}">${dia}</span>
-                <div style="display:flex;gap:2px;">${dots}</div>
-              </div>
-              ${evHtml}
-            </div>`;
+          grade += `<div style="min-height:64px;padding:4px 5px;border-bottom:1px solid var(--b0);border-right:${borderRight};${isHoje?'background:rgba(200,255,87,.07);':''}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+              <span style="font-size:12px;${isHoje?'background:var(--acc);color:#09090d;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;':'color:var(--text);'}">${dia}</span>
+              <div style="display:flex;gap:2px;">${dots}</div>
+            </div>${evHtml}</div>`;
         }
-        const totalCelulas = primeiroDia+diasNoMes;
-        const restante = totalCelulas%7===0?0:7-(totalCelulas%7);
-        for (let i=0;i<restante;i++) {
-          grade += `<div style="min-height:64px;border-right:1px solid var(--b0);opacity:.3;"></div>`;
-        }
-        grade += `</div>`;
+        const restante = (primeiroDia+diasNoMes)%7===0?0:7-(primeiroDia+diasNoMes)%7;
+        for (let i=0;i<restante;i++) grade += '<div style="min-height:64px;border-right:1px solid var(--b0);opacity:.3;"></div>';
+        grade += '</div>';
         gradeEl.innerHTML = grade;
 
         // Timeline
-        renderDashTimeline(eventos, diaHoje);
-      }
-
-      function renderDashTimeline(eventos, diaHoje) {
-        const el = document.getElementById('dash-cal-timeline');
-        if (!el) return;
-        if (!eventos.length) {
-          el.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px;">Nenhum evento cadastrado neste mês.</div>`;
-          return;
-        }
+        const tlEl = document.getElementById('dash-cal-timeline');
+        if (!eventos.length) { tlEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px;">Nenhum evento cadastrado neste mês.</div>'; return; }
         const porDia = {};
         eventos.forEach(e => { if(!porDia[e.dia]) porDia[e.dia]=[]; porDia[e.dia].push(e); });
         const dias = Object.keys(porDia).map(Number).sort((a,b)=>a-b);
-        let html = '';
-        dias.forEach((dia, idx) => {
+        let tlHtml = '';
+        dias.forEach((dia,idx) => {
           const evs = porDia[dia];
           const passado = diaHoje>0 && dia<diaHoje;
           const ehHoje  = dia===diaHoje;
@@ -6260,52 +6226,44 @@
           const totalDia = evs.reduce((s,e)=>s+e.valor,0);
           const cor = totalDia>=0?'var(--green)':'var(--red)';
           const isLast = idx===dias.length-1;
-          html += `
-            <div style="display:flex;gap:0;align-items:stretch;">
-              <div style="display:flex;flex-direction:column;align-items:center;width:36px;flex-shrink:0;">
-                <div style="width:12px;height:12px;border-radius:50%;margin-top:14px;flex-shrink:0;
-                  background:${ehHoje?'var(--acc)':passado?'var(--green)':'var(--s4)'};
-                  border:2px solid ${ehHoje?'var(--acc)':passado?'var(--green)':'var(--b2)'};
-                  ${ehHoje?'box-shadow:0 0 0 3px rgba(200,255,87,.25);':''}"></div>
-                ${!isLast?`<div style="flex:1;width:2px;background:var(--b1);min-height:14px;"></div>`:''}
+          tlHtml += `<div style="display:flex;gap:0;align-items:stretch;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:36px;flex-shrink:0;">
+              <div style="width:12px;height:12px;border-radius:50%;margin-top:14px;flex-shrink:0;background:${ehHoje?'var(--acc)':passado?'var(--green)':'var(--s4)'};border:2px solid ${ehHoje?'var(--acc)':passado?'var(--green)':'var(--b2)'};${ehHoje?'box-shadow:0 0 0 3px rgba(200,255,87,.25);':''}"></div>
+              ${!isLast?'<div style="flex:1;width:2px;background:var(--b1);min-height:14px;"></div>':''}
+            </div>
+            <div style="flex:1;padding:.5rem .5rem .5rem .375rem;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.375rem;">
+                <span style="font-size:12px;font-weight:600;color:${ehHoje?'var(--acc)':'var(--text)'};">Dia ${dia}${ehHoje?' — hoje':''}</span>
+                ${passado?'<span style="font-size:9px;background:rgba(34,197,94,.1);color:var(--green);border-radius:99px;padding:1px 6px;">passado</span>':''}
+                ${futuro?'<span style="font-size:9px;background:rgba(96,165,250,.1);color:var(--blue);border-radius:99px;padding:1px 6px;">futuro</span>':''}
+                <span style="font-size:12px;font-weight:600;color:${cor};">${totalDia>=0?'+':''}${fmt(totalDia)}</span>
               </div>
-              <div style="flex:1;padding:.5rem .5rem .5rem .375rem;margin-bottom:${isLast?'0':'3px'};">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.375rem;">
-                  <div style="display:flex;align-items:center;gap:6px;">
-                    <span style="font-size:12px;font-weight:600;color:${ehHoje?'var(--acc)':'var(--text)'};">Dia ${dia}${ehHoje?' — hoje':''}</span>
-                    ${passado?'<span style="font-size:9px;background:rgba(34,197,94,.1);color:var(--green);border-radius:99px;padding:1px 6px;">passado</span>':''}
-                    ${futuro?'<span style="font-size:9px;background:rgba(96,165,250,.1);color:var(--blue);border-radius:99px;padding:1px 6px;">futuro</span>':''}
-                  </div>
-                  <span style="font-size:12px;font-weight:600;color:${cor};">${totalDia>=0?'+':''}${fmt(totalDia)}</span>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:3px;">
-                  ${evs.map(e=>{
-                    const icone=e.tipo==='renda'?'💰':e.tipo==='essencial'?'🏠':e.tipo==='nao-essencial'?'🛍️':e.tipo==='divida'?'⚠️':'💳';
-                    const corV=e.valor>=0?'var(--green)':'var(--red)';
-                    const bg=e.pago?'rgba(34,197,94,.05)':'var(--s3)';
-                    const border=e.pago?'1px solid rgba(34,197,94,.2)':'1px solid var(--b1)';
-                    return `<div style="display:flex;align-items:center;justify-content:space-between;background:${bg};border:${border};border-radius:7px;padding:6px 9px;">
-                      <div style="display:flex;align-items:center;gap:6px;min-width:0;">
-                        <span style="font-size:13px;flex-shrink:0;">${icone}</span>
-                        <div style="min-width:0;">
-                          <div style="font-size:12px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.label}</div>
-                          ${e.membro?`<div style="font-size:10px;color:var(--muted);">${e.membro}</div>`:''}
-                        </div>
-                      </div>
-                      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-                        ${e.pago?'<span style="font-size:9px;color:var(--green);">✓ pago</span>':''}
-                        <span style="font-size:12px;font-weight:600;color:${corV};">${e.valor>=0?'+':''}${fmt(Math.abs(e.valor))}</span>
-                      </div>
-                    </div>`;
-                  }).join('')}
-                </div>
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                ${evs.map(e=>{
+                  const icone=e.tipo==='renda'?'💰':e.tipo==='essencial'?'🏠':e.tipo==='nao-essencial'?'🛍️':e.tipo==='divida'?'⚠️':'💳';
+                  const corV=e.valor>=0?'var(--green)':'var(--red)';
+                  return '<div style="display:flex;align-items:center;justify-content:space-between;background:'+(e.pago?'rgba(34,197,94,.05)':'var(--s3)')+';border:'+(e.pago?'1px solid rgba(34,197,94,.2)':'1px solid var(--b1)')+';border-radius:7px;padding:6px 9px;"><div style="display:flex;align-items:center;gap:6px;min-width:0;"><span style="font-size:13px;flex-shrink:0;">'+icone+'</span><div style="min-width:0;"><div style="font-size:12px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+e.label+'</div>'+(e.membro?'<div style="font-size:10px;color:var(--muted);">'+e.membro+'</div>':'')+'</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">'+(e.pago?'<span style="font-size:9px;color:var(--green);">✓ pago</span>':'')+'<span style="font-size:12px;font-weight:600;color:'+corV+';">'+(e.valor>=0?'+':'')+fmt(Math.abs(e.valor))+'</span></div></div>';
+                }).join('')}
               </div>
-            </div>`;
+            </div>
+          </div>`;
         });
-        el.innerHTML = html;
+        tlEl.innerHTML = tlHtml;
       }
-
+      function calAbrirDia(dia) {
+        const ano = _calAno, mes = _calMes;
+        const eventos = calEventos(ano, mes).filter(e => e.dia === dia);
+        if (!eventos.length) return;
+        const nomeMes = MESES_PT[mes];
+        let txt = `📅 ${dia} de ${nomeMes} de ${ano}\n\n`;
+        eventos.forEach(e => {
+          const sinal = e.valor >= 0 ? '+' : '';
+          txt += `• ${e.label}: ${sinal}${fmt(Math.abs(e.valor))}${e.pago?' ✓':''}\n`;
+        });
+        showToast(txt.split('\n')[2] || `Dia ${dia}`, 'green');
+      }
     </script>
+
 
   <!-- ══ MODAL NOVA SENHA ══ -->
   <div id="reset-pass-modal">
@@ -6347,4 +6305,3 @@
   </div>
 
 </body>
-</html>
