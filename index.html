@@ -5396,14 +5396,26 @@
       //  💾 PERSISTÊNCIA NO SUPABASE
       // ══════════════════════════════════════════
       async function loadStateFromSupabase() {
-        if (!_currentUser) return false;
+        if (!_currentUser) { console.warn('[loadState] abortado — _currentUser é null'); return false; }
         try {
+          console.log('[loadState] buscando dados para user_id:', _currentUser.id);
           const { data, error } = await _sb.from('user_data')
             .select('state_json')
             .eq('user_id', _currentUser.id)
             .single();
-          if (error || !data) return false;
+          if (error) {
+            // PGRST116 = nenhuma linha encontrada — normal no primeiro acesso
+            if (error.code === 'PGRST116') {
+              console.log('[loadState] nenhum dado salvo ainda — primeiro acesso');
+            } else {
+              console.error('[loadState] ERRO Supabase:', error);
+              showToast('⚠️ Erro ao carregar dados: ' + (error.message || error.code), 'red');
+            }
+            return false;
+          }
+          if (!data?.state_json) { console.log('[loadState] state_json vazio'); return false; }
           const saved = JSON.parse(data.state_json);
+          console.log('[loadState] dados carregados com sucesso:', Object.keys(saved));
           if (saved.membros?.length) state.membros = saved.membros;
           if (saved.rendas?.length) state.rendas = saved.rendas;
           if (saved.essenciais?.length) state.essenciais = saved.essenciais;
@@ -5417,19 +5429,32 @@
           if (saved.lastResetMonth) state.lastResetMonth = saved.lastResetMonth;
           if (saved.onboardingDone) state.onboardingDone = saved.onboardingDone;
           return true;
-        } catch (e) { console.warn('Load error', e); return false; }
+        } catch (e) { console.error('[loadState] EXCEÇÃO:', e); return false; }
       }
 
       async function persistSave() {
-        if (!_currentUser) return;
+        if (!_currentUser) {
+          console.warn('[persistSave] abortado — _currentUser é null');
+          return;
+        }
         try {
-          const { error } = await _sb.from('user_data').upsert({
+          const payload = {
             user_id: _currentUser.id,
             state_json: JSON.stringify(state),
             updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id' });
-          if (error) console.warn('Save error', error);
-        } catch (e) { console.warn('Save error', e); }
+          };
+          console.log('[persistSave] salvando para user_id:', _currentUser.id, '| tamanho JSON:', payload.state_json.length, 'bytes');
+          const { data, error } = await _sb.from('user_data').upsert(payload, { onConflict: 'user_id' });
+          if (error) {
+            console.error('[persistSave] ERRO Supabase:', error);
+            showToast('⚠️ Erro ao salvar: ' + (error.message || error.code || JSON.stringify(error)), 'red');
+          } else {
+            console.log('[persistSave] OK:', data);
+          }
+        } catch (e) {
+          console.error('[persistSave] EXCEÇÃO:', e);
+          showToast('⚠️ Erro inesperado ao salvar: ' + e.message, 'red');
+        }
       }
 
       // ══════════════════════════════════════════
