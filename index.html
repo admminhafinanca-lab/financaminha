@@ -6154,6 +6154,7 @@
       }
 
       function renderDashCalendario() {
+        if (!document.getElementById("dash-cal-mes-label")) return;
         const ano = _dashCalAno, mes = _dashCalMes;
         const hoje = new Date();
         const ehMesAtual = ano === hoje.getFullYear() && mes === hoje.getMonth();
