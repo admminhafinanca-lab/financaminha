@@ -2517,6 +2517,11 @@
       //  MAIN CALCULAR
       // ══════════════════════════════════════════
       let _saveTimer;
+
+      function debounceAutoSave() {
+        clearTimeout(_saveTimer);
+        _saveTimer = setTimeout(() => { persistSave(); showSaveIndicator(); }, 1200);
+      }
       function calcular() {
         syncBeneficios();
         syncEmerg();
@@ -2557,8 +2562,7 @@
         document.getElementById('topbar-saldo').textContent = fmt(saldo);
 
         // auto-save debounced
-        clearTimeout(_saveTimer);
-        _saveTimer = setTimeout(() => { persistSave(); showSaveIndicator(); }, 1200);
+        debounceAutoSave();
       }
 
       // ══════════════════════════════════════════
