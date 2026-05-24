@@ -1285,6 +1285,16 @@
         transform: translateX(0);
       }
 
+      /* footer do sidebar acompanha a sidebar em mobile */
+      #sidebar-footer {
+        width: 80vw !important;
+        max-width: 320px !important;
+        transform: translateX(-100%);
+      }
+      #sidebar-footer.open {
+        transform: translateX(0);
+      }
+
       .topbar {
         display: flex;
       }
@@ -2161,6 +2171,7 @@
     width:var(--sidebar-w); z-index:9999;
     background:var(--s1); border-top:1px solid var(--b0);
     pointer-events:all; padding:.75rem .875rem; display:none; flex-direction:column; gap:4px;
+    transition: transform .3s cubic-bezier(.4,0,.2,1);
   ">
     <div style="display:flex;align-items:center;gap:8px;padding:2px 2px 4px;">
       <div id="sidebar-user-avatar" style="width:28px;height:28px;border-radius:50%;background:rgba(200,255,87,.15);display:flex;align-items:center;justify-content:center;font-family:var(--ff);font-size:11px;font-weight:700;color:var(--acc);flex-shrink:0;"></div>
@@ -2522,11 +2533,15 @@
       function openSidebar() {
         document.getElementById('sidebar').classList.add('open');
         document.getElementById('overlay').classList.add('show');
-        document.body.style.overflow = 'hidden'; // prevent scroll behind sidebar
+        const sf = document.getElementById('sidebar-footer');
+        if (sf) sf.classList.add('open');
+        document.body.style.overflow = 'hidden';
       }
       function closeSidebar() {
         document.getElementById('sidebar').classList.remove('open');
         document.getElementById('overlay').classList.remove('show');
+        const sf = document.getElementById('sidebar-footer');
+        if (sf) sf.classList.remove('open');
         document.body.style.overflow = '';
       }
 
