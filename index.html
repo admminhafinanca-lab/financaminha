@@ -5470,31 +5470,68 @@
         } catch (e) { console.error('[loadState] EXCEÇÃO:', e); return false; }
       }
 
-      async function persistSave() {
-        if (!_currentUser) {
-          console.warn('[persistSave] abortado — _currentUser é null');
-          return;
-        }
-        try {
-          const payload = {
-            user_id: _currentUser.id,
-            state_json: JSON.stringify(state),
-            updated_at: new Date().toISOString()
-          };
-          console.log('[persistSave] salvando para user_id:', _currentUser.id, '| tamanho JSON:', payload.state_json.length, 'bytes');
-          const { data, error } = await _sb.from('user_data').upsert(payload, { onConflict: 'user_id' });
-          if (error) {
-            console.error('[persistSave] ERRO Supabase:', error);
-            showToast('⚠️ Erro ao salvar: ' + (error.message || error.code || JSON.stringify(error)), 'red');
-          } else {
-            console.log('[persistSave] OK:', data);
-          }
-        } catch (e) {
-          console.error('[persistSave] EXCEÇÃO:', e);
-          showToast('⚠️ Erro inesperado ao salvar: ' + e.message, 'red');
-        }
-      }
+     async function persistSave() {
+  if (!_currentUser) {
+    console.warn('[persistSave] abortado — _currentUser é null');
+    return;
+  }
+  try {
+    // Sanitização antes de salvar
+    function sanitizeNum(v, fallback = 0) {
+      const n = parseFloat(String(v).replace(',', '.'));
+      return (isFinite(n) && !isNaN(n)) ? n : fallback;
+    }
+    function sanitizeItems(arr) {
+      if (!Array.isArray(arr)) return [];
+      return arr.map(item => {
+        const clean = { ...item };
+        ['valor','total','juros','minimo','parcelas','dia','idade'].forEach(campo => {
+          if (campo in clean) clean[campo] = sanitizeNum(clean[campo]);
+        });
+        return clean;
+      });
+    }
 
+    const safeState = {
+      ...state,
+      rendas:        sanitizeItems(state.rendas),
+      essenciais:    sanitizeItems(state.essenciais),
+      naoEssenciais: sanitizeItems(state.naoEssenciais),
+      dividas:       sanitizeItems(state.dividas),
+      investimentos: sanitizeItems(state.investimentos),
+      cartoes:       sanitizeItems(state.cartoes),
+      metas:         sanitizeItems(state.metas),
+      beneficios: {
+        va:     sanitizeNum(state.beneficios?.va),
+        vr:     sanitizeNum(state.beneficios?.vr),
+        vt:     sanitizeNum(state.beneficios?.vt),
+        vhome:  sanitizeNum(state.beneficios?.vhome),
+        vsaude: sanitizeNum(state.beneficios?.vsaude),
+        voutra: sanitizeNum(state.beneficios?.voutra),
+      },
+      emergAtual: sanitizeNum(state.emergAtual),
+    };
+
+    const payload = {
+      user_id:    _currentUser.id,
+      state_json: JSON.stringify(safeState),
+      updated_at: new Date().toISOString()
+    };
+
+    console.log('[persistSave] salvando para user_id:', _currentUser.id, '| tamanho JSON:', payload.state_json.length, 'bytes');
+
+    const { data, error } = await _sb.from('user_data').upsert(payload, { onConflict: 'user_id' });
+    if (error) {
+      console.error('[persistSave] ERRO Supabase:', error);
+      showToast('⚠️ Erro ao salvar: ' + (error.message || error.code || JSON.stringify(error)), 'red');
+    } else {
+      console.log('[persistSave] OK:', data);
+    }
+  } catch (e) {
+    console.error('[persistSave] EXCEÇÃO:', e);
+    showToast('⚠️ Erro inesperado ao salvar: ' + e.message, 'red');
+  }
+}
       // ══════════════════════════════════════════
       //  🚀 INICIALIZAÇÃO COM AUTH
       // ══════════════════════════════════════════
