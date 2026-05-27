@@ -2582,9 +2582,12 @@
         const ne = getTotNE();
         const minDiv = getTotDivMin();
         const essLiq = Math.max(0, ess - cov.superCov - cov.netCov);
-        const neLiq = Math.max(0, ne - cov.combCov);
+        const neLiq  = Math.max(0, ne  - cov.combCov);
+        // Benefícios que sobram após cobrir despesas (VA cobre alimentação, VT transporte, etc.)
+        // Só entra no saldo o que não foi "consumido" cobrindo despesas
+        const benefLivre = Math.max(0, benef - cov.total);
         const total = essLiq + neLiq + minDiv;
-        const saldo = renda + benef - total;
+        const saldo = renda + benefLivre - total;
         const reserva = Math.max(100, Math.min(300, saldo * 0.2));
         const lazer = Math.max(0, saldo * 0.05);
         const extra = Math.max(0, saldo - reserva - lazer);
@@ -2788,7 +2791,9 @@
       //  RENDAS
       // ══════════════════════════════════════════
       function addRenda() {
-        state.rendas.push({ id: uid('r'), nome: 'Nova renda', valor: 0, dia: 5, membro: state.membros[0]?.id || 'm1', tipo: 'fixo' });
+        const hoje = new Date();
+        const comp = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0');
+        state.rendas.push({ id: uid('r'), nome: 'Nova renda', valor: 0, dia: 5, membro: state.membros[0]?.id || 'm1', tipo: 'fixo', competencia: comp });
         renderRendas(); calcular();
       }
       function removeRenda(id) { state.rendas = state.rendas.filter(r => r.id !== id); renderRendas(); calcular(); }
@@ -2806,6 +2811,7 @@
       <div class="item-fields if-auto">
         <div class="ifield"><label>Valor (R$)</label><input type="number" value="${r.valor}" oninput="state.rendas[${i}].valor=+this.value;calcular()"></div>
         <div class="ifield"><label>Dia recebimento</label><input type="number" value="${r.dia}" min="1" max="31" oninput="state.rendas[${i}].dia=+this.value;calcular()"></div>
+        <div class="ifield"><label>Competência</label><input type="month" value="${r.competencia||''}" oninput="state.rendas[${i}].competencia=this.value;calcular()" style="color-scheme:dark"></div>
         <div class="ifield"><label>Membro</label><select onchange="state.rendas[${i}].membro=this.value">${membrosOptions(r.membro)}</select></div>
         <div class="ifield"><label>Tipo</label>
           <select onchange="state.rendas[${i}].tipo=this.value;renderRendas()">
@@ -2833,7 +2839,9 @@
       //  ESSENCIAIS
       // ══════════════════════════════════════════
       function addEssencial() {
-        state.essenciais.push({ id: uid('e'), nome: 'Nova despesa', valor: 0, dia: 10, membro: state.membros[0]?.id || 'm1', cat: 'outros', fixo: true, pago: false });
+        const hoje = new Date();
+        const comp = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0');
+        state.essenciais.push({ id: uid('e'), nome: 'Nova despesa', valor: 0, dia: 10, membro: state.membros[0]?.id || 'm1', cat: 'outros', fixo: true, pago: false, competencia: comp });
         renderEssenciais(); calcular();
       }
       function removeEssencial(id) { state.essenciais = state.essenciais.filter(e => e.id !== id); renderEssenciais(); calcular(); }
@@ -2890,6 +2898,7 @@
       <div class="item-fields if-auto">
         <div class="ifield"><label>Valor (R$)</label><input type="number" value="${e.valor}" oninput="state.essenciais[${i}].valor=+this.value;calcular()"></div>
         <div class="ifield"><label>Vencimento (dia)</label><input type="number" value="${e.dia}" min="1" max="31" oninput="state.essenciais[${i}].dia=+this.value;calcular()"></div>
+        <div class="ifield"><label>Competência</label><input type="month" value="${e.competencia||''}" oninput="state.essenciais[${i}].competencia=this.value" style="color-scheme:dark"></div>
         <div class="ifield"><label>Membro</label><select onchange="state.essenciais[${i}].membro=this.value;renderMembros();renderFamiliaTotais()">${membrosOptions(e.membro)}</select></div>
         <div class="ifield"><label>Categoria</label>
           <select onchange="state.essenciais[${i}].cat=this.value;calcular()">
@@ -2923,7 +2932,9 @@
       //  NÃO ESSENCIAIS
       // ══════════════════════════════════════════
       function addNE() {
-        state.naoEssenciais.push({ id: uid('n'), nome: 'Nova despesa', valor: 0, dia: 20, membro: state.membros[0]?.id || 'm1', cat: 'outros', fixo: false, pago: false });
+        const hoje = new Date();
+        const comp = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0');
+        state.naoEssenciais.push({ id: uid('n'), nome: 'Nova despesa', valor: 0, dia: 20, membro: state.membros[0]?.id || 'm1', cat: 'outros', fixo: false, pago: false, competencia: comp });
         renderNE(); calcular();
       }
       function removeNE(id) { state.naoEssenciais = state.naoEssenciais.filter(n => n.id !== id); renderNE(); calcular(); }
@@ -2945,6 +2956,7 @@
       <div class="item-fields if-auto">
         <div class="ifield"><label>Valor (R$)</label><input type="number" value="${n.valor}" oninput="state.naoEssenciais[${i}].valor=+this.value;calcular()"></div>
         <div class="ifield"><label>Vencimento (dia)</label><input type="number" value="${n.dia}" min="1" max="31" oninput="state.naoEssenciais[${i}].dia=+this.value;calcular()"></div>
+        <div class="ifield"><label>Competência</label><input type="month" value="${n.competencia||''}" oninput="state.naoEssenciais[${i}].competencia=this.value" style="color-scheme:dark"></div>
         <div class="ifield"><label>Membro</label><select onchange="state.naoEssenciais[${i}].membro=this.value;renderMembros();renderFamiliaTotais()">${membrosOptions(n.membro)}</select></div>
         <div class="ifield"><label>Categoria</label>
           <select onchange="state.naoEssenciais[${i}].cat=this.value;calcular()">
@@ -3686,6 +3698,21 @@
         if (totDiv <= 0) { el.innerHTML = '<div class="hbox hbox-green">Sem dívidas cadastradas!</div>'; return; }
         if (extra <= 0) { el.innerHTML = '<div class="hbox hbox-red">Sem saldo extra. Verifique receitas e despesas.</div>'; return; }
 
+        // ── Detecta despesas essenciais em atraso (não pagas e vencimento já passou) ──
+        const hoje = new Date();
+        const diaHoje = hoje.getDate();
+        const atrasadas = [...state.essenciais, ...state.naoEssenciais].filter(x => !x.pago && (x.dia||0) < diaHoje);
+        if (atrasadas.length > 0) {
+          const totAtrasado = atrasadas.reduce((s, x) => s + x.valor, 0);
+          el.innerHTML += `<div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:12px 16px;margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px;">⚠️ ${atrasadas.length} conta${atrasadas.length>1?'s':''} em atraso — prioridade ao receber renda</div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              ${atrasadas.map(x=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text);"><span>${esc(x.nome)}</span><span style="color:var(--red);font-weight:600">–${fmt(x.valor)}</span></div>`).join('')}
+            </div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(248,113,113,.2);font-size:12px;color:var(--muted);">Total em atraso: <span style="color:var(--red);font-weight:700">${fmt(totAtrasado)}</span> — quite estas antes de qualquer outra alocação.</div>
+          </div>`;
+        }
+
         // Monta lista de dívidas ordenada por juros (bola de neve)
         let debtPool = [
           ...state.dividas.map(d => ({ id: d.id, nome: d.nome, juros: d.juros, minimo: d.minimo, saldo: d.total, tipo: 'divida', cor: 'var(--red)' })),
@@ -3693,7 +3720,6 @@
         ].filter(d => d.saldo > 0).sort((a, b) => b.juros - a.juros);
 
         const nomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-        const hoje = new Date();
         let totRestante = debtPool.reduce((s, d) => s + d.saldo, 0);
         let res = 0;
 
@@ -5948,9 +5974,12 @@
       function calEventos(ano, mes) {
         const hoje = new Date();
         const eventos = [];
+        const mesStr = ano + '-' + String(mes+1).padStart(2,'0');
 
         // Rendas
         (state.rendas || []).forEach(r => {
+          // Se tem competência definida, só aparece no mês correto
+          if (r.competencia && r.competencia !== mesStr) return;
           const dia = Math.min(parseInt(r.dia) || 1, 28);
           eventos.push({
             dia, tipo: 'renda',
@@ -5963,6 +5992,7 @@
 
         // Despesas essenciais
         (state.essenciais || []).forEach(d => {
+          if (d.competencia && d.competencia !== mesStr) return;
           const dia = Math.min(parseInt(d.vencimento||d.dia) || 1, 28);
           eventos.push({
             dia, tipo: 'essencial',
@@ -5976,6 +6006,7 @@
 
         // Despesas não essenciais
         (state.naoEssenciais || []).forEach(d => {
+          if (d.competencia && d.competencia !== mesStr) return;
           const dia = Math.min(parseInt(d.vencimento||d.dia) || 1, 28);
           eventos.push({
             dia, tipo: 'nao-essencial',
@@ -6162,15 +6193,12 @@
               </div>
               <!-- conteúdo -->
               <div style="flex:1;padding:.625rem .625rem .625rem .5rem;margin-bottom:${isLast?'0':'4px'};">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
-                  <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:13px;font-weight:600;color:${ehHoje?'var(--acc)':'var(--text)'};">
-                      Dia ${dia}${ehHoje?' — hoje':''}
-                    </span>
-                    ${passado?'<span style="font-size:10px;background:rgba(34,197,94,.1);color:var(--green);border-radius:99px;padding:1px 7px;">passado</span>':''}
-                    ${futuro?'<span style="font-size:10px;background:rgba(96,165,250,.1);color:var(--blue);border-radius:99px;padding:1px 7px;">futuro</span>':''}
-                  </div>
-                  <span style="font-size:13px;font-weight:600;color:${cor};">${totalDia>=0?'+':''}${fmt(totalDia)}</span>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:.5rem;">
+                  <span style="font-size:13px;font-weight:600;color:${ehHoje?'var(--acc)':'var(--text)'};">
+                    Dia ${dia}${ehHoje?' — hoje':''}
+                  </span>
+                  ${passado?'<span style="font-size:10px;background:rgba(34,197,94,.1);color:var(--green);border-radius:99px;padding:1px 7px;">passado</span>':''}
+                  ${futuro?'<span style="font-size:10px;background:rgba(96,165,250,.1);color:var(--blue);border-radius:99px;padding:1px 7px;">futuro</span>':''}
                 </div>
                 <div style="display:flex;flex-direction:column;gap:4px;">
                   ${evs.map(e => {
@@ -6193,6 +6221,10 @@
                         </div>
                       </div>`;
                   }).join('')}
+                </div>
+                <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--b1);display:flex;justify-content:flex-end;">
+                  <span style="font-size:12px;color:var(--muted);margin-right:6px;">saldo do dia</span>
+                  <span style="font-size:13px;font-weight:700;color:${cor};">${totalDia>=0?'+':''}${fmt(totalDia)}</span>
                 </div>
               </div>
             </div>`;
@@ -6308,11 +6340,10 @@
               ${!isLast?'<div style="flex:1;width:2px;background:var(--b1);min-height:14px;"></div>':''}
             </div>
             <div style="flex:1;padding:.5rem .5rem .5rem .375rem;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.375rem;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:.375rem;">
                 <span style="font-size:12px;font-weight:600;color:${ehHoje?'var(--acc)':'var(--text)'};">Dia ${dia}${ehHoje?' — hoje':''}</span>
                 ${passado?'<span style="font-size:9px;background:rgba(34,197,94,.1);color:var(--green);border-radius:99px;padding:1px 6px;">passado</span>':''}
                 ${futuro?'<span style="font-size:9px;background:rgba(96,165,250,.1);color:var(--blue);border-radius:99px;padding:1px 6px;">futuro</span>':''}
-                <span style="font-size:12px;font-weight:600;color:${cor};">${totalDia>=0?'+':''}${fmt(totalDia)}</span>
               </div>
               <div style="display:flex;flex-direction:column;gap:3px;">
                 ${evs.map(e=>{
@@ -6320,6 +6351,10 @@
                   const corV=e.valor>=0?'var(--green)':'var(--red)';
                   return '<div style="display:flex;align-items:center;justify-content:space-between;background:'+(e.pago?'rgba(34,197,94,.05)':'var(--s3)')+';border:'+(e.pago?'1px solid rgba(34,197,94,.2)':'1px solid var(--b1)')+';border-radius:7px;padding:6px 9px;"><div style="display:flex;align-items:center;gap:6px;min-width:0;"><span style="font-size:13px;flex-shrink:0;">'+icone+'</span><div style="min-width:0;"><div style="font-size:12px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+e.label+'</div>'+(e.membro?'<div style="font-size:10px;color:var(--muted);">'+e.membro+'</div>':'')+'</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">'+(e.pago?'<span style="font-size:9px;color:var(--green);">✓ pago</span>':'')+'<span style="font-size:12px;font-weight:600;color:'+corV+';">'+(e.valor>=0?'+':'')+fmt(Math.abs(e.valor))+'</span></div></div>';
                 }).join('')}
+              </div>
+              <div style="margin-top:5px;padding-top:5px;border-top:1px solid var(--b1);display:flex;justify-content:flex-end;">
+                <span style="font-size:11px;color:var(--muted);margin-right:5px;">saldo do dia</span>
+                <span style="font-size:12px;font-weight:700;color:${cor};">${totalDia>=0?'+':''}${fmt(totalDia)}</span>
               </div>
             </div>
           </div>`;
