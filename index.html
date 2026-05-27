@@ -2424,6 +2424,14 @@
       }
 
       // ── helpers ──
+      function esc(str) {
+        return String(str == null ? '' : str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
       function fmt(v) { return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
       function g(id) { const el = document.getElementById(id); return el ? +el.value || 0 : 0; }
       function gStr(id) { const el = document.getElementById(id); return el ? el.value : ''; }
@@ -2663,7 +2671,7 @@
           <input
             id="nome-membro-${m.id}"
             type="text"
-            value="${m.nome}"
+            value="${esc(m.nome)}"
             placeholder="Nome do membro"
             onchange="atualizarMembro('${m.id}','nome',this.value)"
             style="width:100%;background:var(--s3);border:1px solid var(--b1);border-radius:8px;padding:7px 10px;color:var(--text);font-size:15px;font-weight:600;font-family:var(--ff);outline:none;transition:border-color .15s"
@@ -2694,7 +2702,7 @@
         </div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:8px">
-        💡 Para vincular gastos a ${m.nome.split(' ')[0]}, edite cada despesa e selecione o membro.
+        💡 Para vincular gastos a ${esc(m.nome.split(' ')[0])}, edite cada despesa e selecione o membro.
       </div>
     </div>`;
         });
@@ -2729,7 +2737,7 @@
         el.innerHTML = custos.map(({ m, c }) => {
           const pct = totGeral > 0 ? clamp(c.total / totGeral * 100, 0, 100) : 0;
           return `<div class="card-row">
-      <label>${m.nome} <span style="font-size:10px;color:var(--muted)">(${m.tipo})</span></label>
+      <label>${esc(m.nome)} <span style="font-size:10px;color:var(--muted)">(${esc(m.tipo)})</span></label>
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-weight:600;color:var(--orange)">${fmt(c.total)}</span>
         <span style="font-size:10px;color:var(--muted)">${Math.round(pct)}%</span>
@@ -2773,7 +2781,7 @@
 
       // membrosOptions for selects
       function membrosOptions(selected = '') {
-        return state.membros.map(m => `<option value="${m.id}" ${m.id === selected ? 'selected' : ''}>${m.nome}</option>`).join('');
+        return state.membros.map(m => `<option value="${esc(m.id)}" ${m.id === selected ? 'selected' : ''}>${esc(m.nome)}</option>`).join('');
       }
 
       // ══════════════════════════════════════════
@@ -2791,7 +2799,7 @@
           el.innerHTML += `<div class="item-card">
       <div class="item-top">
         <span style="font-size:20px">💰</span>
-        <input class="item-name-inp" value="${r.nome}" onchange="state.rendas[${i}].nome=this.value;calcular()">
+        <input class="item-name-inp" value="${esc(r.nome)}" onchange="state.rendas[${i}].nome=this.value;calcular()">
         <span class="badge ${r.tipo === 'fixo' ? 'b-green' : 'b-yellow'}">${r.tipo}</span>
         <button class="rm-btn" onclick="removeRenda('${r.id}')">remover</button>
       </div>
@@ -2874,7 +2882,7 @@
           <div class="chk-pago-box">${e.pago ? '✓' : ''}</div>
           ${e.pago ? 'Pago' : 'Marcar pago'}
         </label>
-        <input class="item-name-inp" value="${e.nome}" onchange="state.essenciais[${i}].nome=this.value;calcular()">
+        <input class="item-name-inp" value="${esc(e.nome)}" onchange="state.essenciais[${i}].nome=this.value;calcular()">
         <span class="badge ${e.fixo ? 'b-blue' : 'b-yellow'}">${e.fixo ? 'Fixo' : 'Variável'}</span>
         <div class="venc-dot ${getDotClass(e.dia)}"></div>
         <button class="rm-btn" onclick="removeEssencial('${e.id}')">remover</button>
@@ -2929,7 +2937,7 @@
           <div class="chk-pago-box">${n.pago ? '✓' : ''}</div>
           ${n.pago ? 'Pago' : 'Marcar pago'}
         </label>
-        <input class="item-name-inp" value="${n.nome}" onchange="state.naoEssenciais[${i}].nome=this.value;calcular()">
+        <input class="item-name-inp" value="${esc(n.nome)}" onchange="state.naoEssenciais[${i}].nome=this.value;calcular()">
         <span class="badge ${n.fixo ? 'b-blue' : 'b-yellow'}">${n.fixo ? 'Fixo' : 'Variável'}</span>
         <div class="venc-dot ${getDotClass(n.dia)}"></div>
         <button class="rm-btn" onclick="removeNE('${n.id}')">remover</button>
@@ -3041,7 +3049,7 @@
           el.innerHTML += `<div class="cc-card" style="--cc-color:${cor}">
       <div class="cc-top">
         <div>
-          <div class="cc-banco">${c.banco} <span style="font-size:12px;color:var(--muted);font-weight:400">${c.bandeira}</span></div>
+          <div class="cc-banco">${esc(c.banco)} <span style="font-size:12px;color:var(--muted);font-weight:400">${esc(c.bandeira)}</span></div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.tipo} · Venc. dia ${c.venc}</div>
         </div>
         <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -3094,7 +3102,7 @@
     ${best.db.programa} — ${best.db.beneficios.join(' · ')}
   </div>` + scored.map((c, i) => `<div class="card-row">
     <div>
-      <span style="font-weight:500">${i + 1}. ${c.banco} ${c.bandeira}</span>
+      <span style="font-weight:500">${i + 1}. ${esc(c.banco)} ${esc(c.bandeira)}</span>
       <div style="font-size:11px;color:var(--muted);margin-top:2px">
         ${c.db.milhas ? '✈ Milhas ' : ''}${c.db.cashback ? '💰 Cashback ' : ''}${c.db.pontos ? '⭐ Pontos ' : ''}
         · Anuidade: ${c.anuidade > 0 ? fmt(c.anuidade / 12) + '/mês' : 'grátis'}
@@ -3124,7 +3132,7 @@
           const opts = CATS_DIV.map(c => `<option value="${c}" ${d.cat === c ? 'selected' : ''}>${CATS_DIV_LABEL[c]}</option>`).join('');
           el.innerHTML += `<div class="item-card">
       <div class="item-top">
-        <input class="item-name-inp" value="${d.nome}" onchange="state.dividas[${i}].nome=this.value">
+        <input class="item-name-inp" value="${esc(d.nome)}" onchange="state.dividas[${i}].nome=this.value">
         <span class="badge ${badge}">${d.juros}%/mês</span>
         <button class="rm-btn" onclick="removeDivida('${d.id}')">remover</button>
       </div>
@@ -3146,7 +3154,7 @@
           const parcTotal = c.parcelas.reduce((s, p) => s + (p.total > 0 && p.pagas >= 0 ? p.total - p.pagas * p.valor : 0), 0);
           return `<div class="item-card" style="border-color:${db.cor}44">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="font-family:var(--ff);font-weight:700;font-size:15px">${c.banco} ${c.bandeira}</span>
+        <span style="font-family:var(--ff);font-weight:700;font-size:15px">${esc(c.banco)} ${esc(c.bandeira)}</span>
         <span class="badge b-red">Taxa: ${c.taxa}%/mês</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px">
@@ -3181,7 +3189,7 @@
       <div>
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:11px;background:rgba(255,255,255,.07);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:700">${i + 1}</span>
-          <span style="font-weight:500">${d.nome}</span>
+          <span style="font-weight:500">${esc(d.nome)}</span>
           ${i === 0 ? '<span style="font-size:10px;padding:2px 6px;border-radius:5px;background:rgba(200,255,87,.12);color:var(--acc);font-weight:600">prioridade</span>' : ''}
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px;margin-left:26px">
@@ -3391,7 +3399,7 @@
           el.innerHTML += `<div class="inv-card">
       <div class="inv-top">
         <div style="flex:1">
-          <input value="${inv.nome}" onchange="state.investimentos[${i}].nome=this.value"
+          <input value="${esc(inv.nome)}" onchange="state.investimentos[${i}].nome=this.value"
             style="background:var(--s3);border:1px solid var(--b1);border-radius:8px;padding:6px 10px;color:var(--text);font-family:var(--ff);font-size:15px;font-weight:600;width:100%;outline:none;transition:border-color .15s"
             onfocus="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--b1)'">
           <div style="font-size:11px;color:var(--muted);margin-top:4px">${info.l} · ${info.ir ? 'IR sobre rendimento' : 'Isento de IR'} · taxa ~${(info.taxa * 100).toFixed(2)}%/mês</div>
@@ -3760,20 +3768,11 @@
       }
 
       // ══════════════════════════════════════════
-      //  💾 BANCO DE DADOS — localStorage
+      //  💾 UTILITÁRIOS DE DADOS
       // ══════════════════════════════════════════
-      function persistSave() {
-        try {
-          localStorage.setItem(DB_KEY, JSON.stringify(state));
-        } catch (e) { console.warn('Save error', e); }
-      }
       function saveState() {
         persistSave();
         showToast('💾 Dados salvos com sucesso!', 'green');
-      }
-      function loadState() {
-        // Substituído por loadStateFromSupabase() — chamado após auth
-        return false;
       }
       function exportData() {
         const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
@@ -4575,7 +4574,7 @@
             <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;flex-wrap:wrap">
               <div class="meta-icon" style="background:${cat.bg}">${cat.icon}</div>
               <div style="flex:1;min-width:0">
-                <div class="meta-nome">${m.nome}</div>
+                <div class="meta-nome">${esc(m.nome)}</div>
                 <div class="meta-sub">Prazo: ${m.prazo ? fmtMes(m.prazo) : 'Sem prazo definido'}</div>
               </div>
               <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
@@ -5289,7 +5288,6 @@
 
       // ── Controle de sessão única ──
       async function checkAndKillOtherSessions(userId, token) {
-        // Salva / atualiza o token de sessão ativa
         const sessionToken = btoa(userId + ':' + Date.now()).slice(0, 64);
         const { data: existing } = await _sb.from('active_sessions')
           .select('id, session_token, last_seen')
@@ -5298,12 +5296,10 @@
 
         const now = new Date().toISOString();
         if (existing) {
-          // Há sessão ativa — verifica se foi há menos de 3 minutos (outro device logado)
           const lastSeen = new Date(existing.last_seen);
           const diffMin = (Date.now() - lastSeen.getTime()) / 60000;
           if (diffMin < 3) {
-            // Outra sessão ativa recentemente — invalida a anterior e prossegue
-            // (a sessão anterior será bloqueada no próximo heartbeat)
+            console.warn('[Session] sessão anterior ativa há', diffMin.toFixed(1), 'min — assumindo controle.');
           }
           await _sb.from('active_sessions').update({
             session_token: sessionToken,
@@ -5318,11 +5314,10 @@
             user_agent: navigator.userAgent.slice(0, 200)
           });
         }
-        // Salva o token localmente para validar o heartbeat
         try { sessionStorage.setItem('fm_session_token', sessionToken); } catch(e) { /* Safari private mode */ }
       }
 
-      // ── Heartbeat: verifica a cada 60s se esta é a sessão válida ──
+      // ── Heartbeat: verifica a cada 20s se esta é a sessão válida ──
       function startSessionHeartbeat() {
         setInterval(async () => {
           if (!_currentUser) return;
@@ -5333,14 +5328,16 @@
             .eq('user_id', _currentUser.id)
             .single();
           if (data && data.session_token !== myToken) {
-            // Outra sessão assumiu o controle
+            // Outra sessão assumiu o controle — encerra imediatamente sem esperar próximo ciclo
             showToast('⚠️ Sessão encerrada — outro dispositivo fez login.', 'red');
-            setTimeout(() => { _sb.auth.signOut(); location.reload(); }, 2500);
+            _currentUser = null; // impede saves adicionais
+            clearTimeout(_saveTimer);
+            await _sb.auth.signOut();
+            setTimeout(() => location.reload(), 2500);
           } else {
-            // Atualiza last_seen
             await _sb.from('active_sessions').update({ last_seen: new Date().toISOString() }).eq('user_id', _currentUser.id);
           }
-        }, 60000);
+        }, 20000);
       }
 
       // ── Após login bem-sucedido ──
@@ -5609,7 +5606,7 @@
         tabelaEl.innerHTML = meses.map((m, i) => `
           <div style="background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-              <div style="font-size:15px;font-weight:600;color:var(--text);text-transform:capitalize;">${m.nome}</div>
+              <div style="font-size:15px;font-weight:600;color:var(--text);text-transform:capitalize;">${esc(m.nome)}</div>
               <div style="font-size:14px;font-weight:600;color:${m.saldo >= 0 ? 'var(--acc)' : 'var(--red)'};">
                 Saldo: ${fmt(m.saldo)}
               </div>
