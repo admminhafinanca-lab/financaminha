@@ -2324,7 +2324,7 @@
         </div>
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="closeResetModal()" style="flex:1;padding:12px;background:none;border:1px solid var(--b1);border-radius:10px;color:var(--muted);font-size:14px;font-family:var(--fb);cursor:pointer;">Agora não</button>
+        <button onclick="closeMonthlyResetModal()" style="flex:1;padding:12px;background:none;border:1px solid var(--b1);border-radius:10px;color:var(--muted);font-size:14px;font-family:var(--fb);cursor:pointer;">Agora não</button>
         <button onclick="doMonthlyReset()" style="flex:1;padding:12px;background:var(--acc);color:#09090d;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:var(--fb);cursor:pointer;">Iniciar novo mês</button>
       </div>
     </div>
@@ -3423,10 +3423,10 @@
           <select onchange="state.investimentos[${i}].tipo=this.value;renderInvestimentos()">${tipoOpts}</select>
         </div>
         <div class="ifield"><label>Valor atual (R$)</label>
-          <input type="number" value="${inv.valor}" oninput="state.investimentos[${i}].valor=+this.value;renderInvestimentos()">
+          <input type="number" value="${inv.valor}" onchange="state.investimentos[${i}].valor=+this.value;renderInvestimentos()">
         </div>
         <div class="ifield"><label>Aporte mensal (R$)</label>
-          <input type="number" value="${inv.aporte}" oninput="state.investimentos[${i}].aporte=+this.value;renderInvestimentos();calcular()">
+          <input type="number" value="${inv.aporte}" onchange="state.investimentos[${i}].aporte=+this.value;renderInvestimentos();calcular()">
         </div>
         <div class="ifield"><label>Membro</label>
           <select onchange="state.investimentos[${i}].membro=this.value">${membrosOptions(inv.membro)}</select>
@@ -5069,7 +5069,7 @@
         showToast(`✅ Novo mês iniciado! Contas resetadas.`, 'green');
       }
 
-      function closeResetModal() {
+      function closeMonthlyResetModal() {
         const now = new Date();
         const mesAtual = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
         state.lastResetMonth = mesAtual; // não pergunta de novo neste mês
