@@ -2414,6 +2414,15 @@
       let _nextId = 100;
       function uid(p) { return p + (++_nextId); }
 
+      function syncNextId() {
+        const allIds = [
+          ...state.rendas, ...state.essenciais, ...state.naoEssenciais,
+          ...state.cartoes, ...state.dividas, ...state.investimentos,
+          ...state.metas, ...state.membros
+        ].map(x => parseInt((x.id || '').replace(/\D/g, ''))).filter(n => !isNaN(n));
+        if (allIds.length) _nextId = Math.max(...allIds) + 1;
+      }
+
       // ── helpers ──
       function fmt(v) { return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
       function g(id) { const el = document.getElementById(id); return el ? +el.value || 0 : 0; }
@@ -5466,6 +5475,7 @@
           if (saved.metas?.length) state.metas = saved.metas;
           if (saved.lastResetMonth) state.lastResetMonth = saved.lastResetMonth;
           if (saved.onboardingDone) state.onboardingDone = saved.onboardingDone;
+          syncNextId();
           return true;
         } catch (e) { console.error('[loadState] EXCEÇÃO:', e); return false; }
       }
