@@ -1498,6 +1498,20 @@
           <strong>Dica</strong>
           Cartão de crédito: até 400% ao ano. Priorize quitar antes de qualquer investimento!
         </div>
+
+        <!-- Usuário + Sair -->
+        <div style="margin-top:.5rem;padding:.625rem .5rem;border-top:1px solid var(--b0);display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:8px;padding:2px;">
+            <div id="sidebar-user-avatar" style="width:28px;height:28px;border-radius:50%;background:rgba(200,255,87,.15);display:flex;align-items:center;justify-content:center;font-family:var(--ff);font-size:11px;font-weight:700;color:var(--acc);flex-shrink:0;"></div>
+            <div style="min-width:0;flex:1;">
+              <div id="sidebar-user-name" style="font-size:13px;font-weight:600;color:var(--text);font-family:var(--ff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+              <div id="sidebar-user-email" style="font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+            </div>
+          </div>
+          <button id="btn-logout" onclick="doLogout()" style="width:100%;background:none;border:1px solid rgba(248,113,113,.2);border-radius:8px;color:var(--red);font-family:var(--fb);font-size:13px;padding:8px 10px;cursor:pointer;text-align:left;transition:all .15s;-webkit-appearance:none;" onmouseover="this.style.background='rgba(248,113,113,.06)'" onmouseout="this.style.background='none'">
+            🚪 Sair da conta
+          </button>
+        </div>
       </nav>
       <!-- ══ MAIN ══ -->
       <main class="main">
@@ -2082,27 +2096,7 @@
   </div><!-- /app-wrapper -->
 
   <!-- Botão sair FORA do app-wrapper — position:fixed direto no body (fix Safari) -->
-  <div id="sidebar-footer" style="
-    position:fixed; bottom:0; left:0;
-    width:var(--sidebar-w); z-index:9999;
-    background:var(--s1); border-top:1px solid var(--b0);
-    pointer-events:all; padding:.75rem .875rem; display:none; flex-direction:column; gap:4px;
-    transition: transform .3s cubic-bezier(.4,0,.2,1);
-  ">
-    <div style="display:flex;align-items:center;gap:8px;padding:2px 2px 4px;">
-      <div id="sidebar-user-avatar" style="width:28px;height:28px;border-radius:50%;background:rgba(200,255,87,.15);display:flex;align-items:center;justify-content:center;font-family:var(--ff);font-size:11px;font-weight:700;color:var(--acc);flex-shrink:0;"></div>
-      <div style="min-width:0;flex:1;">
-        <div id="sidebar-user-name" style="font-size:13px;font-weight:600;color:var(--text);font-family:var(--ff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-        <div id="sidebar-user-email" style="font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-      </div>
-    </div>
-    <button id="btn-logout" onclick="doLogout()" style="
-      width:100%; background:none; border:1px solid rgba(248,113,113,.2);
-      border-radius:8px; color:var(--red); font-family:var(--fb); font-size:13px;
-      padding:8px 10px; cursor:pointer; text-align:left; transition:all .15s;
-      -webkit-appearance:none;
-    ">🚪 Sair da conta</button>
-  </div>
+  <!-- sidebar-footer integrado à sidebar (ver nav acima) -->
 
   <!-- ══ MODAL: ONBOARDING ══ -->
   <div id="onboarding-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:16px;">
@@ -2466,15 +2460,11 @@
       function openSidebar() {
         document.getElementById('sidebar').classList.add('open');
         document.getElementById('overlay').classList.add('show');
-        const sf = document.getElementById('sidebar-footer');
-        if (sf) sf.classList.add('open');
         document.body.style.overflow = 'hidden';
       }
       function closeSidebar() {
         document.getElementById('sidebar').classList.remove('open');
         document.getElementById('overlay').classList.remove('show');
-        const sf = document.getElementById('sidebar-footer');
-        if (sf) sf.classList.remove('open');
         document.body.style.overflow = '';
       }
 
@@ -5320,7 +5310,6 @@
         _currentUser = user;
         // Registra/assume sessão única antes de qualquer coisa
         try { await checkAndKillOtherSessions(user.id, ''); } catch(e) { console.warn('session check skipped', e); }
-        document.getElementById('sidebar-footer').style.display = 'flex';
         // Exibe email provisório enquanto carrega o state
         const emailEl = document.getElementById('sidebar-user-email');
         if (emailEl) emailEl.textContent = user.email;
