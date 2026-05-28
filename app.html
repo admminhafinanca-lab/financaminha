@@ -5325,11 +5325,11 @@
         // Verifica se usuário é admin (mostra botão na sidebar se for)
         await checkAdminRole(user);
         // Carrega dados do usuário
-        await loadStateFromSupabase();
+        try { await loadStateFromSupabase(); } catch(e) { console.error('[onAuthSuccess] loadState falhou:', e); }
         // Atualiza nome com o do state (membro titular)
-        updateSidebarUser();
+        try { updateSidebarUser(); } catch(e) {}
         // Inicializa o app
-        initApp();
+        try { initApp(); } catch(e) { console.error('[onAuthSuccess] initApp falhou:', e); }
       }
 
       // ── Tradução de erros ──
@@ -5422,8 +5422,9 @@
       }
 
       async function persistSave() {
+        console.log('[persistSave] chamado. _currentUser:', _currentUser?.id || 'NULL');
         if (!_currentUser) {
-          console.warn('[persistSave] abortado — _currentUser é null');
+          console.warn('[persistSave] abortado — _currentUser é null. O login foi concluído?');
           return;
         }
         try {
@@ -5711,14 +5712,15 @@
       let _adminCfgCache = []; // cache dos configs carregados
 
       async function checkAdminRole(user) {
-        // app_metadata vem no JWT — disponível via getUser()
-        const { data: { user: u } } = await _sb.auth.getUser();
-        const meta = u?.app_metadata || {};
-        _isAdmin = meta.role === 'admin';
-        if (_isAdmin) {
-          const btn = document.getElementById('btn-open-admin');
-          if (btn) btn.style.display = 'block';
-        }
+        try {
+          const { data: { user: u } } = await _sb.auth.getUser();
+          const meta = u?.app_metadata || {};
+          _isAdmin = meta.role === 'admin';
+          if (_isAdmin) {
+            const btn = document.getElementById('btn-open-admin');
+            if (btn) btn.style.display = 'block';
+          }
+        } catch(e) { console.warn('[checkAdminRole] ignorado:', e.message); }
       }
 
       function openAdminModal() {
