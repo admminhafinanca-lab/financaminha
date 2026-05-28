@@ -1475,7 +1475,7 @@
         <button class="nav-btn" onclick="nav('plano',this)"><span class="nav-icon">📅</span>Plano quitação</button>
         <button class="nav-btn" onclick="nav('projecao',this)"><span class="nav-icon">🔮</span>Projeção mensal</button>
         <button class="nav-btn" onclick="nav('metas',this)"><span class="nav-icon">🏆</span>Metas financeiras</button>
-        <button class="nav-btn" onclick="nav('dashboard',document.querySelector('.nav-btn.active')||document.querySelector('.nav-btn'));document.getElementById('dash-cal-grade').scrollIntoView({behavior:'smooth',block:'start'})"><span class="nav-icon">🗓️</span>Calendário</button>
+
 
         <button class="nav-btn-admin" id="btn-open-admin" onclick="openAdminModal()">
           ⚙️ &nbsp;Configurações Admin
@@ -5007,7 +5007,11 @@
       (async function bootGuard() {
         const { data: { session } } = await _sb.auth.getSession();
         if (!session) {
-          location.href = 'index.html';
+          // Só redireciona se não estamos no meio de um processo de auth (hash de recovery etc)
+          const hash = window.location.hash;
+          if (!hash.includes('type=recovery') && !hash.includes('access_token')) {
+            location.href = 'index.html';
+          }
           return;
         }
         // Sessão válida — onAuthStateChange vai disparar SIGNED_IN e chamar onAuthSuccess
@@ -5074,8 +5078,6 @@
         try {
           const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
           if (error) throw error;
-          // Verificar se já existe sessão ativa em outro device
-          await checkAndKillOtherSessions(data.user.id, data.session.access_token);
           await onAuthSuccess(data.user);
         } catch (err) {
           const m = traduzErroAuth(err.message, 'btn-login', 'Entrar'); if (m) setAuthMsg(m);
@@ -5234,9 +5236,11 @@
       function doLogout() {
         const btn = document.getElementById('btn-logout');
         if (btn) { btn.disabled = true; btn.textContent = 'Saindo...'; }
-        _sb.auth.signOut()
-          .catch(e => console.error("signOut error", e))
-          .finally(() => { location.href = 'index.html'; });
+        // SIGNED_OUT event no onAuthStateChange cuida do redirect para index.html
+        _sb.auth.signOut().catch(e => {
+          console.error("signOut error", e);
+          location.href = 'index.html'; // fallback
+        });
       }
 
       // ── Controle de sessão única ──
@@ -5314,6 +5318,8 @@
           return;
         }
         _currentUser = user;
+        // Registra/assume sessão única antes de qualquer coisa
+        try { await checkAndKillOtherSessions(user.id, ''); } catch(e) { console.warn('session check skipped', e); }
         document.getElementById('sidebar-footer').style.display = 'flex';
         // Exibe email provisório enquanto carrega o state
         const emailEl = document.getElementById('sidebar-user-email');
