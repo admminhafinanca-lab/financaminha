@@ -5226,10 +5226,8 @@
       function doLogout() {
         const btn = document.getElementById('btn-logout');
         if (btn) { btn.disabled = true; btn.textContent = 'Saindo...'; }
-        // SIGNED_OUT event no onAuthStateChange cuida do redirect para index.html
-        _sb.auth.signOut().catch(e => {
-          console.error("signOut error", e);
-          location.href = 'index.html'; // fallback
+        _sb.auth.signOut().finally(() => {
+          location.href = 'index.html';
         });
       }
 
