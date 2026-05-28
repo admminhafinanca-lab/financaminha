@@ -8,128 +8,293 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg:#09090d;--s1:#111318;--s2:#181b22;--s3:#1e2230;
-      --b1:rgba(255,255,255,.09);--b2:rgba(255,255,255,.15);
-      --text:#eeeef0;--muted:#7a7f96;--dim:#4a4f66;
-      --red:#f87171;--acc:#c8ff57;
-      --ff:'Syne',sans-serif;--fb:'Instrument Sans',sans-serif;
+      --bg: #09090d; --s1: #111318; --s2: #181b22; --s3: #1e2230;
+      --b0: rgba(255,255,255,.05); --b1: rgba(255,255,255,.09); --b2: rgba(255,255,255,.15);
+      --text: #eeeef0; --muted: #7a7f96; --dim: #4a4f66;
+      --green: #4ade80; --red: #f87171; --acc: #c8ff57;
+      --ff: 'Syne', sans-serif; --fb: 'Instrument Sans', sans-serif;
     }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px;min-height:100vh}
-    button{font-family:var(--fb);cursor:pointer}
-    input{font-family:var(--fb)}
-    .wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}
-    .box{width:100%;max-width:400px}
-    .logo{text-align:center;margin-bottom:2rem}
-    .logo-title{font-family:var(--ff);font-size:28px;font-weight:700;color:var(--acc);letter-spacing:-.5px}
-    .logo-sub{font-size:13px;color:var(--muted);margin-top:4px}
-    .card{background:var(--s1);border:1px solid var(--b1);border-radius:16px;padding:2rem}
-    .card-title{font-family:var(--ff);font-size:18px;font-weight:700;color:var(--text);margin-bottom:1.5rem}
-    .field{margin-bottom:1rem}
-    .field:last-of-type{margin-bottom:1.5rem}
-    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.03em;text-transform:uppercase}
-    input[type=email],input[type=password]{width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:border-color .15s}
-    input:focus{border-color:var(--acc)}
-    .btn{width:100%;padding:12px;background:var(--acc);color:#09090d;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s}
-    .btn:hover{opacity:.88}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .btn-ghost{width:100%;padding:11px;background:none;color:var(--muted);border:1px solid var(--b1);border-radius:8px;font-size:14px;cursor:pointer;transition:all .15s;margin-top:10px}
-    .btn-ghost:hover{border-color:var(--b2);color:var(--text)}
-    .msg{margin-top:1rem;font-size:13px;text-align:center;min-height:20px;line-height:1.5}
-    .footer{text-align:center;margin-top:1.25rem;font-size:12px;color:var(--dim)}
-    .row-forgot{text-align:right;margin-top:6px}
-    .link{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--fb)}
-    .link:hover{color:var(--acc)}
-    .divider{text-align:center;color:var(--muted);font-size:12px;margin:1rem 0}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--fb); font-size: 14px;
+           min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .auth-box {
+      background: var(--s1); border: 1px solid var(--b1); border-radius: 20px;
+      width: 100%; max-width: 420px; padding: 2.5rem 2rem; animation: fadeIn .3s ease;
+    }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:none } }
+    .auth-logo { font-family: var(--ff); font-size: 22px; font-weight: 700; color: var(--acc);
+                 margin-bottom: 4px; }
+    .auth-sub  { font-size: 12px; color: var(--muted); margin-bottom: 2rem; }
+    .auth-tabs { display: flex; gap: 4px; background: var(--s2); border-radius: 10px;
+                 padding: 4px; margin-bottom: 1.5rem; }
+    .auth-tab  { flex: 1; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer;
+                 font-size: 13px; font-weight: 500; color: var(--muted); border: none;
+                 background: transparent; font-family: var(--fb); transition: all .15s; }
+    .auth-tab.active { background: var(--s3); color: var(--text); }
+    .auth-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 1rem; }
+    .auth-field label { font-size: 11px; color: var(--muted); text-transform: uppercase;
+                        letter-spacing: .06em; }
+    .auth-field input {
+      background: var(--s2); border: 1px solid var(--b1); border-radius: 8px;
+      color: var(--text); font-family: var(--fb); font-size: 14px;
+      padding: 10px 12px; outline: none; transition: border-color .15s;
+    }
+    .auth-field input:focus { border-color: var(--acc); }
+    .auth-btn {
+      width: 100%; padding: 12px; background: var(--acc); color: #09090d;
+      border: none; border-radius: 8px; font-family: var(--fb); font-size: 14px;
+      font-weight: 600; cursor: pointer; margin-top: .5rem; transition: opacity .15s;
+    }
+    .auth-btn:hover { opacity: .88; }
+    .auth-btn:disabled { opacity: .45; cursor: default; }
+    .auth-link { font-size: 12px; color: var(--muted); text-align: center;
+                 margin-top: .75rem; cursor: pointer; }
+    .auth-link span { color: var(--acc); text-decoration: underline; }
+    #auth-msg { font-size: 12px; min-height: 18px; text-align: center; margin-top: .5rem; line-height: 1.5; }
+    .auth-divider { border: none; border-top: 1px solid var(--b0); margin: 1.25rem 0; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="box">
-      <div class="logo">
-        <div class="logo-title">FinançaMinha</div>
-        <div class="logo-sub">gestão financeira familiar</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Entrar na conta</div>
+  <div class="auth-box">
+    <div class="auth-logo">FinançaMinha</div>
+    <div class="auth-sub">gestão financeira familiar</div>
 
-        <div class="field">
-          <label>E-mail</label>
-          <input id="email" type="email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()">
-        </div>
-        <div class="field">
-          <label>Senha</label>
-          <input id="pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-          <div class="row-forgot">
-            <button class="link" onclick="location.href='forgot.html'">Esqueci minha senha</button>
-          </div>
-        </div>
-
-        <button class="btn" id="btn-login" onclick="doLogin()">Entrar</button>
-
-        <div class="divider">— ou —</div>
-
-        <button class="btn-ghost" onclick="location.href='signup.html'">Criar uma conta</button>
-
-        <div class="msg" id="msg"></div>
-      </div>
-      <div class="footer">Seus dados ficam salvos na nuvem com segurança.</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="authTab('login')">Entrar</button>
+      <button class="auth-tab" id="tab-signup" onclick="authTab('signup')">Criar conta</button>
     </div>
+
+    <!-- FORM LOGIN -->
+    <div id="form-login">
+      <div class="auth-field">
+        <label>E-mail</label>
+        <input type="email" id="auth-email" placeholder="seu@email.com"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="auth-field">
+        <label>Senha</label>
+        <input type="password" id="auth-pass" placeholder="••••••"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="auth-btn" id="btn-login" onclick="doLogin()">Entrar</button>
+      <div class="auth-link" onclick="doForgotPassword()">
+        Esqueceu a senha? <span>Recuperar acesso</span>
+      </div>
+    </div>
+
+    <!-- FORM SIGNUP -->
+    <div id="form-signup" style="display:none">
+      <div class="auth-field">
+        <label>Seu nome</label>
+        <input type="text" id="auth-name" placeholder="João Silva"
+               onkeydown="if(event.key==='Enter')document.getElementById('auth-email-s').focus()">
+      </div>
+      <div class="auth-field">
+        <label>E-mail</label>
+        <input type="email" id="auth-email-s" placeholder="seu@email.com"
+               onkeydown="if(event.key==='Enter')document.getElementById('auth-pass-s').focus()">
+      </div>
+      <div class="auth-field">
+        <label>Senha</label>
+        <input type="password" id="auth-pass-s" placeholder="mínimo 6 caracteres"
+               onkeydown="if(event.key==='Enter')doSignup()">
+      </div>
+      <button class="auth-btn" id="btn-signup" onclick="doSignup()">Criar conta</button>
+    </div>
+
+    <div id="auth-msg"></div>
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://iapsjwiahrngytrxawrj.supabase.co';
+    const SUPABASE_URL     = 'https://iapsjwiahrngytrxawrj.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_6rRbVuPIfuF56utFPfVzLg_waXyH5XS';
     const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    function setMsg(html, isError = true) {
-      const el = document.getElementById('msg');
-      el.innerHTML = html;
-      el.style.color = isError ? 'var(--red)' : 'var(--acc)';
-    }
-    function setBusy(busy) {
-      const btn = document.getElementById('btn-login');
-      btn.disabled = busy;
-      btn.textContent = busy ? 'Entrando…' : 'Entrar';
-    }
-    function traduzErro(msg) {
-      if (!msg) return 'Erro desconhecido.';
-      if (msg.includes('Invalid login credentials')) return 'E-mail ou senha incorretos.';
-      if (msg.includes('Email not confirmed')) return '⚠️ E-mail não confirmado. Verifique sua caixa de entrada.';
-      if (msg.includes('Too many requests')) return '⏳ Muitas tentativas. Aguarde alguns minutos.';
-      return msg;
-    }
+    // Se já logado, redireciona direto
+    (async () => {
+      const { data: { session } } = await _sb.auth.getSession();
+      if (session) location.href = 'dashboard.html';
+      // Check msg param
+      const params = new URLSearchParams(location.search);
+      if (params.get('msg') === 'confirme-email') {
+        setAuthMsg('⚠️ Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.', true);
+      }
+    })();
 
-    // Checa sessão ativa — se já logado, vai direto para o app
+    // ── Recovery redirect ──
     _sb.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
-        location.href = 'forgot.html#recovery';
-        return;
+        location.href = 'forgot.html' + window.location.hash;
       }
       if (event === 'SIGNED_IN' && session) {
-        location.href = 'app.html';
+        location.href = 'dashboard.html';
       }
     });
 
+    function authTab(tab) {
+      const isLogin = tab === 'login';
+      document.getElementById('form-login').style.display  = isLogin ? 'block' : 'none';
+      document.getElementById('form-signup').style.display = isLogin ? 'none'  : 'block';
+      document.getElementById('tab-login').classList.toggle('active', isLogin);
+      document.getElementById('tab-signup').classList.toggle('active', !isLogin);
+      setAuthMsg('');
+    }
+
+    function setAuthMsg(msg, isError = true) {
+      const el = document.getElementById('auth-msg');
+      el.innerHTML = msg;
+      el.style.color = isError ? 'var(--red)' : 'var(--green)';
+    }
+
+    function setBtnLoading(id, loading, label) {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.disabled = loading;
+      btn.textContent = loading ? 'Aguarde...' : label;
+      btn.style.opacity = loading ? '.6' : '1';
+    }
+
+    let _countdownTimer = null;
+    function startRateLimitCountdown(seconds, btnId, originalLabel) {
+      clearInterval(_countdownTimer);
+      const btn = document.getElementById(btnId);
+      let remaining = seconds;
+      if (btn) { btn.disabled = true; btn.textContent = `Aguarde ${remaining}s...`; }
+      setAuthMsg(`⏳ Muitas tentativas. Tente novamente em <strong id="cd-count">${remaining}s</strong>.`, true);
+      _countdownTimer = setInterval(() => {
+        remaining--;
+        const cdEl = document.getElementById('cd-count');
+        if (cdEl) cdEl.textContent = remaining + 's';
+        if (btn) btn.textContent = `Aguarde ${remaining}s...`;
+        if (remaining <= 0) {
+          clearInterval(_countdownTimer);
+          if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+          setAuthMsg('');
+        }
+      }, 1000);
+    }
+
+    function traduzErroAuth(msg, btnId, originalLabel) {
+      if (!msg) return 'Erro desconhecido.';
+      if (msg.includes('Invalid login credentials'))   return 'E-mail ou senha incorretos.';
+      if (msg.includes('Email not confirmed'))         return '⚠️ E-mail não confirmado. Verifique sua caixa de entrada.';
+      if (msg.includes('User already registered'))     return 'E-mail já cadastrado. Faça login.';
+      if (msg.includes('Password should be') || msg.includes('weak_password')) return 'Senha muito fraca. Use pelo menos 6 caracteres.';
+      if (msg.includes('security purposes') || msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
+        const match = msg.match(/(\d+)\s*second/);
+        const secs = match ? parseInt(match[1]) : 60;
+        if (btnId) startRateLimitCountdown(secs, btnId, originalLabel);
+        return '';
+      }
+      if (msg.includes('unable to validate email') || msg.includes('invalid email')) return 'E-mail inválido.';
+      if (msg.includes('signup is disabled')) return 'Cadastro desativado no momento.';
+      if (msg.includes('network') || msg.includes('fetch'))  return 'Erro de conexão. Verifique sua internet.';
+      return msg;
+    }
+
+    async function verificarCompraCakto(email) {
+      try {
+        const res = await fetch(SUPABASE_URL + '/functions/v1/smooth-handler', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        });
+        if (!res.ok) throw new Error('Erro na verificação');
+        const data = await res.json();
+        return data.allowed === true;
+      } catch (err) {
+        console.error('verificarCompraCakto:', err);
+        return false;
+      }
+    }
+
     async function doLogin() {
-      const email = document.getElementById('email').value.trim();
-      const pass  = document.getElementById('pass').value;
-      if (!email) { setMsg('Informe seu e-mail.'); return; }
-      if (!pass)  { setMsg('Informe sua senha.'); return; }
-      setBusy(true); setMsg('');
+      const email = document.getElementById('auth-email').value.trim();
+      const pass  = document.getElementById('auth-pass').value;
+      if (!email || !pass) { setAuthMsg('Preencha e-mail e senha.'); return; }
+      setBtnLoading('btn-login', true, 'Entrar'); clearInterval(_countdownTimer);
       try {
         const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
-        if (!data.user.email_confirmed_at) {
-          await _sb.auth.signOut();
-          setMsg('⚠️ Confirme seu e-mail antes de acessar.');
+        location.href = 'dashboard.html';
+      } catch (err) {
+        const m = traduzErroAuth(err.message, 'btn-login', 'Entrar');
+        if (m) setAuthMsg(m);
+      } finally {
+        if (!_countdownTimer || !document.getElementById('btn-login').disabled)
+          setBtnLoading('btn-login', false, 'Entrar');
+      }
+    }
+
+    async function doSignup() {
+      const name  = document.getElementById('auth-name').value.trim();
+      const email = document.getElementById('auth-email-s').value.trim();
+      const pass  = document.getElementById('auth-pass-s').value;
+      if (!name)  { setAuthMsg('Informe seu nome.'); return; }
+      if (!email) { setAuthMsg('Informe seu e-mail.'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setAuthMsg('E-mail inválido.'); return; }
+      if (pass.length < 6) { setAuthMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
+      setBtnLoading('btn-signup', true, 'Criar conta'); setAuthMsg('');
+      try {
+        setBtnLoading('btn-signup', true, 'Verificando compra…');
+        const temCompra = await verificarCompraCakto(email);
+        if (!temCompra) {
+          setAuthMsg('🔒 Acesso não encontrado.<br><span style="font-size:12px;color:var(--muted);">Este e-mail não possui uma compra ativa do FinançaMinha.</span>');
           return;
         }
-        location.href = 'app.html';
+        setBtnLoading('btn-signup', true, 'Criando conta…');
+        const { data, error } = await _sb.auth.signUp({ email, password: pass, options: { data: { full_name: name } } });
+        if (error) throw error;
+        const jaExiste = data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0;
+        if (jaExiste) {
+          const { error: loginErr } = await _sb.auth.signInWithPassword({ email, password: '##CHECK_ONLY##' });
+          const msgLogin = loginErr?.message || '';
+          if (msgLogin.includes('Email not confirmed')) {
+            const el = document.getElementById('auth-msg');
+            el.innerHTML = '⚠️ E-mail já cadastrado mas não confirmado. <a href="#" id="link-reenviar" style="color:var(--acc);text-decoration:underline;">Reenviar confirmação</a>';
+            el.style.color = 'var(--red)';
+            document.getElementById('link-reenviar').onclick = (e) => { e.preventDefault(); reenviarConfirmacao(email); };
+          } else {
+            const el = document.getElementById('auth-msg');
+            el.innerHTML = '⚠️ E-mail já possui cadastro. <a href="#" id="link-ir-login" style="color:var(--acc);text-decoration:underline;">Entrar aqui</a>';
+            el.style.color = 'var(--red)';
+            document.getElementById('link-ir-login').onclick = (e) => { e.preventDefault(); authTab('login'); };
+          }
+          return;
+        }
+        if (data.user && !data.session) {
+          setAuthMsg('✅ Conta criada! Enviamos um link de confirmação para <strong>' + email + '</strong>.', false);
+          return;
+        }
+        if (data.session) location.href = 'dashboard.html';
       } catch (err) {
-        setMsg(traduzErro(err.message));
+        const m2 = traduzErroAuth(err.message, 'btn-signup', 'Criar conta');
+        if (m2) setAuthMsg(m2);
       } finally {
-        setBusy(false);
+        if (!_countdownTimer || !document.getElementById('btn-signup').disabled)
+          setBtnLoading('btn-signup', false, 'Criar conta');
+      }
+    }
+
+    async function reenviarConfirmacao(email) {
+      try {
+        const { error } = await _sb.auth.resend({ type: 'signup', email });
+        if (error) throw error;
+        setAuthMsg('📧 Confirmação reenviada para <strong>' + email + '</strong>.', false);
+      } catch (err) {
+        setAuthMsg('Erro ao reenviar: ' + traduzErroAuth(err.message));
+      }
+    }
+
+    async function doForgotPassword() {
+      const email = document.getElementById('auth-email').value.trim();
+      if (!email) { setAuthMsg('Informe o e-mail no campo acima.'); return; }
+      const redirectTo = window.location.origin + '/forgot.html';
+      const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) {
+        setAuthMsg(traduzErroAuth(error.message));
+      } else {
+        setAuthMsg('📧 Link enviado para ' + email + ' — verifique o spam!', false);
       }
     }
   </script>
