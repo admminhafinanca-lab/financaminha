@@ -25,12 +25,6 @@
     .auth-logo { font-family: var(--ff); font-size: 22px; font-weight: 700; color: var(--acc);
                  margin-bottom: 4px; }
     .auth-sub  { font-size: 12px; color: var(--muted); margin-bottom: 2rem; }
-    .auth-tabs { display: flex; gap: 4px; background: var(--s2); border-radius: 10px;
-                 padding: 4px; margin-bottom: 1.5rem; }
-    .auth-tab  { flex: 1; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer;
-                 font-size: 13px; font-weight: 500; color: var(--muted); border: none;
-                 background: transparent; font-family: var(--fb); transition: all .15s; }
-    .auth-tab.active { background: var(--s3); color: var(--text); }
     .auth-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 1rem; }
     .auth-field label { font-size: 11px; color: var(--muted); text-transform: uppercase;
                         letter-spacing: .06em; }
@@ -52,6 +46,8 @@
     .auth-link span { color: var(--acc); text-decoration: underline; }
     #auth-msg { font-size: 12px; min-height: 18px; text-align: center; margin-top: .5rem; line-height: 1.5; }
     .auth-divider { border: none; border-top: 1px solid var(--b0); margin: 1.25rem 0; }
+    .auth-create-link { font-size: 12px; color: var(--muted); text-align: center; margin-top: 1.25rem; }
+    .auth-create-link a { color: var(--acc); text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -59,61 +55,38 @@
     <div class="auth-logo">FinançaMinha</div>
     <div class="auth-sub">gestão financeira familiar</div>
 
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="tab-login" onclick="authTab('login')">Entrar</button>
-      <button class="auth-tab" id="tab-signup" onclick="authTab('signup')">Criar conta</button>
+    <div class="auth-field">
+      <label>E-mail</label>
+      <input type="email" id="auth-email" placeholder="seu@email.com"
+             onkeydown="if(event.key==='Enter')doLogin()">
     </div>
-
-    <!-- FORM LOGIN -->
-    <div id="form-login">
-      <div class="auth-field">
-        <label>E-mail</label>
-        <input type="email" id="auth-email" placeholder="seu@email.com"
-               onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <div class="auth-field">
-        <label>Senha</label>
-        <input type="password" id="auth-pass" placeholder="••••••"
-               onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <button class="auth-btn" id="btn-login" onclick="doLogin()">Entrar</button>
-      <div class="auth-link" onclick="doForgotPassword()">
-        Esqueceu a senha? <span>Recuperar acesso</span>
-      </div>
+    <div class="auth-field">
+      <label>Senha</label>
+      <input type="password" id="auth-pass" placeholder="••••••"
+             onkeydown="if(event.key==='Enter')doLogin()">
     </div>
-
-    <!-- FORM SIGNUP -->
-    <div id="form-signup" style="display:none">
-      <div class="auth-field">
-        <label>Seu nome</label>
-        <input type="text" id="auth-name" placeholder="João Silva"
-               onkeydown="if(event.key==='Enter')document.getElementById('auth-email-s').focus()">
-      </div>
-      <div class="auth-field">
-        <label>E-mail</label>
-        <input type="email" id="auth-email-s" placeholder="seu@email.com"
-               onkeydown="if(event.key==='Enter')document.getElementById('auth-pass-s').focus()">
-      </div>
-      <div class="auth-field">
-        <label>Senha</label>
-        <input type="password" id="auth-pass-s" placeholder="mínimo 6 caracteres"
-               onkeydown="if(event.key==='Enter')doSignup()">
-      </div>
-      <button class="auth-btn" id="btn-signup" onclick="doSignup()">Criar conta</button>
+    <button class="auth-btn" id="btn-login" onclick="doLogin()">Entrar</button>
+    <div class="auth-link" onclick="doForgotPassword()">
+      Esqueceu a senha? <span>Recuperar acesso</span>
     </div>
 
     <div id="auth-msg"></div>
+
+    <hr class="auth-divider">
+    <div class="auth-create-link">
+      Não tem conta? <a href="signup.html">Criar conta</a>
+    </div>
   </div>
 
   <script>
-    const SUPABASE_URL     = 'https://iapsjwiahrngytrxawrj.supabase.co';
+    const SUPABASE_URL      = 'https://iapsjwiahrngytrxawrj.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_6rRbVuPIfuF56utFPfVzLg_waXyH5XS';
     const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Se já logado, redireciona direto
     (async () => {
       const { data: { session } } = await _sb.auth.getSession();
-      if (session) location.href = 'dashboard.html';
+      if (session) location.href = 'app.html';
       // Check msg param
       const params = new URLSearchParams(location.search);
       if (params.get('msg') === 'confirme-email') {
@@ -127,18 +100,9 @@
         location.href = 'forgot.html' + window.location.hash;
       }
       if (event === 'SIGNED_IN' && session) {
-        location.href = 'dashboard.html';
+        location.href = 'app.html';
       }
     });
-
-    function authTab(tab) {
-      const isLogin = tab === 'login';
-      document.getElementById('form-login').style.display  = isLogin ? 'block' : 'none';
-      document.getElementById('form-signup').style.display = isLogin ? 'none'  : 'block';
-      document.getElementById('tab-login').classList.toggle('active', isLogin);
-      document.getElementById('tab-signup').classList.toggle('active', !isLogin);
-      setAuthMsg('');
-    }
 
     function setAuthMsg(msg, isError = true) {
       const el = document.getElementById('auth-msg');
@@ -178,8 +142,6 @@
       if (!msg) return 'Erro desconhecido.';
       if (msg.includes('Invalid login credentials'))   return 'E-mail ou senha incorretos.';
       if (msg.includes('Email not confirmed'))         return '⚠️ E-mail não confirmado. Verifique sua caixa de entrada.';
-      if (msg.includes('User already registered'))     return 'E-mail já cadastrado. Faça login.';
-      if (msg.includes('Password should be') || msg.includes('weak_password')) return 'Senha muito fraca. Use pelo menos 6 caracteres.';
       if (msg.includes('security purposes') || msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
         const match = msg.match(/(\d+)\s*second/);
         const secs = match ? parseInt(match[1]) : 60;
@@ -187,25 +149,8 @@
         return '';
       }
       if (msg.includes('unable to validate email') || msg.includes('invalid email')) return 'E-mail inválido.';
-      if (msg.includes('signup is disabled')) return 'Cadastro desativado no momento.';
-      if (msg.includes('network') || msg.includes('fetch'))  return 'Erro de conexão. Verifique sua internet.';
+      if (msg.includes('network') || msg.includes('fetch')) return 'Erro de conexão. Verifique sua internet.';
       return msg;
-    }
-
-    async function verificarCompraCakto(email) {
-      try {
-        const res = await fetch(SUPABASE_URL + '/functions/v1/smooth-handler', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-          body: JSON.stringify({ email: email.trim().toLowerCase() }),
-        });
-        if (!res.ok) throw new Error('Erro na verificação');
-        const data = await res.json();
-        return data.allowed === true;
-      } catch (err) {
-        console.error('verificarCompraCakto:', err);
-        return false;
-      }
     }
 
     async function doLogin() {
@@ -216,73 +161,13 @@
       try {
         const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
-        location.href = 'dashboard.html';
+        location.href = 'app.html';
       } catch (err) {
         const m = traduzErroAuth(err.message, 'btn-login', 'Entrar');
         if (m) setAuthMsg(m);
       } finally {
         if (!_countdownTimer || !document.getElementById('btn-login').disabled)
           setBtnLoading('btn-login', false, 'Entrar');
-      }
-    }
-
-    async function doSignup() {
-      const name  = document.getElementById('auth-name').value.trim();
-      const email = document.getElementById('auth-email-s').value.trim();
-      const pass  = document.getElementById('auth-pass-s').value;
-      if (!name)  { setAuthMsg('Informe seu nome.'); return; }
-      if (!email) { setAuthMsg('Informe seu e-mail.'); return; }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setAuthMsg('E-mail inválido.'); return; }
-      if (pass.length < 6) { setAuthMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
-      setBtnLoading('btn-signup', true, 'Criar conta'); setAuthMsg('');
-      try {
-        setBtnLoading('btn-signup', true, 'Verificando compra…');
-        const temCompra = await verificarCompraCakto(email);
-        if (!temCompra) {
-          setAuthMsg('🔒 Acesso não encontrado.<br><span style="font-size:12px;color:var(--muted);">Este e-mail não possui uma compra ativa do FinançaMinha.</span>');
-          return;
-        }
-        setBtnLoading('btn-signup', true, 'Criando conta…');
-        const { data, error } = await _sb.auth.signUp({ email, password: pass, options: { data: { full_name: name } } });
-        if (error) throw error;
-        const jaExiste = data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0;
-        if (jaExiste) {
-          const { error: loginErr } = await _sb.auth.signInWithPassword({ email, password: '##CHECK_ONLY##' });
-          const msgLogin = loginErr?.message || '';
-          if (msgLogin.includes('Email not confirmed')) {
-            const el = document.getElementById('auth-msg');
-            el.innerHTML = '⚠️ E-mail já cadastrado mas não confirmado. <a href="#" id="link-reenviar" style="color:var(--acc);text-decoration:underline;">Reenviar confirmação</a>';
-            el.style.color = 'var(--red)';
-            document.getElementById('link-reenviar').onclick = (e) => { e.preventDefault(); reenviarConfirmacao(email); };
-          } else {
-            const el = document.getElementById('auth-msg');
-            el.innerHTML = '⚠️ E-mail já possui cadastro. <a href="#" id="link-ir-login" style="color:var(--acc);text-decoration:underline;">Entrar aqui</a>';
-            el.style.color = 'var(--red)';
-            document.getElementById('link-ir-login').onclick = (e) => { e.preventDefault(); authTab('login'); };
-          }
-          return;
-        }
-        if (data.user && !data.session) {
-          setAuthMsg('✅ Conta criada! Enviamos um link de confirmação para <strong>' + email + '</strong>.', false);
-          return;
-        }
-        if (data.session) location.href = 'dashboard.html';
-      } catch (err) {
-        const m2 = traduzErroAuth(err.message, 'btn-signup', 'Criar conta');
-        if (m2) setAuthMsg(m2);
-      } finally {
-        if (!_countdownTimer || !document.getElementById('btn-signup').disabled)
-          setBtnLoading('btn-signup', false, 'Criar conta');
-      }
-    }
-
-    async function reenviarConfirmacao(email) {
-      try {
-        const { error } = await _sb.auth.resend({ type: 'signup', email });
-        if (error) throw error;
-        setAuthMsg('📧 Confirmação reenviada para <strong>' + email + '</strong>.', false);
-      } catch (err) {
-        setAuthMsg('Erro ao reenviar: ' + traduzErroAuth(err.message));
       }
     }
 
