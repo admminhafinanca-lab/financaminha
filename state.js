@@ -216,7 +216,8 @@
         renderIdeal();
         renderPlano(extra, minDiv);
         simular();
-        document.getElementById('topbar-saldo').textContent = fmt(saldo);
+        const topbarSaldo = document.getElementById('topbar-saldo');
+        if (topbarSaldo) topbarSaldo.textContent = fmt(saldo);
 
         // Calendário no dashboard
         if (document.getElementById('dash-cal-mes-label')) renderDashCalendario();
