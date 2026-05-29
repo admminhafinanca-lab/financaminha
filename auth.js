@@ -465,24 +465,60 @@
             });
           }
 
+          // ── Merge com o banco: lê o state salvo e só substitui os campos
+          //    que existem nesta página (têm itens) — nunca apaga dados de
+          //    outras páginas com arrays vazios por falta de DOM.
+          let baseState = {};
+          try {
+            const { data: existing } = await _sb.from('user_data')
+              .select('state_json')
+              .eq('user_id', _currentUser.id)
+              .single();
+            if (existing?.state_json) {
+              baseState = JSON.parse(existing.state_json);
+              console.log('[persistSave] merge base carregado do banco');
+            }
+          } catch(e) {
+            console.warn('[persistSave] sem dados anteriores no banco — salvando do zero');
+          }
+
+          // Campos array: só substitui se o state local tiver itens OU se a página
+          // é responsável pelo campo (elemento DOM da seção existe na página atual).
+          function mergeArray(key, localArr, sanitize = true) {
+            const local = sanitize ? sanitizeItems(localArr) : (localArr || []);
+            const pageEl = document.getElementById('page-' + key) ||
+                           document.getElementById('lista-' + key);
+            // Se o elemento da seção existe no DOM desta página, esta página é dona do campo
+            if (pageEl) return local;
+            // Senão, preserva o que está no banco
+            return baseState[key] || local;
+          }
+
           const safeState = {
-            ...state,
-            rendas:        sanitizeItems(state.rendas),
-            essenciais:    sanitizeItems(state.essenciais),
-            naoEssenciais: sanitizeItems(state.naoEssenciais),
-            dividas:       sanitizeItems(state.dividas),
-            investimentos: sanitizeItems(state.investimentos),
-            cartoes:       sanitizeItems(state.cartoes),
-            metas:         sanitizeItems(state.metas),
-            beneficios: {
+            // Base: tudo que estava no banco
+            ...baseState,
+            // Campos simples: sempre salvos (não dependem de DOM de outras páginas)
+            lastResetMonth:  state.lastResetMonth  || baseState.lastResetMonth  || '',
+            onboardingDone:  state.onboardingDone  ?? baseState.onboardingDone  ?? false,
+            emergAtual:      sanitizeNum(state.emergAtual),
+            // Campos array: merge inteligente por presença de DOM
+            membros:         mergeArray('membros',      state.membros,       false),
+            rendas:          mergeArray('rendas',       state.rendas),
+            essenciais:      mergeArray('essenciais',   state.essenciais),
+            naoEssenciais:   mergeArray('nao-essenciais', state.naoEssenciais),
+            cartoes:         mergeArray('cartoes',      state.cartoes),
+            dividas:         mergeArray('dividas',      state.dividas),
+            investimentos:   mergeArray('investimentos',state.investimentos),
+            metas:           mergeArray('metas',        state.metas),
+            // Benefícios: só salva se o elemento existe nesta página
+            beneficios: document.getElementById('page-beneficios') ? {
               va:     sanitizeNum(state.beneficios?.va),
               vr:     sanitizeNum(state.beneficios?.vr),
               vt:     sanitizeNum(state.beneficios?.vt),
               vhome:  sanitizeNum(state.beneficios?.vhome),
               vsaude: sanitizeNum(state.beneficios?.vsaude),
               voutra: sanitizeNum(state.beneficios?.voutra),
-            },
-            emergAtual: sanitizeNum(state.emergAtual),
+            } : (baseState.beneficios || state.beneficios),
           };
 
           const payload = {
