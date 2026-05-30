@@ -121,30 +121,22 @@
 
             // Aguarda auth.js carregar e sobrescreve persistSave com versão logada
             setTimeout(() => {
-              const origPersist = window.persistSave;
-              if (typeof origPersist === 'function') {
+              dlog('initApp: ' + (typeof window.initApp === 'function' ? 'OK' : 'ERRO'), typeof window.initApp === 'function' ? '#4ade80' : '#f87171');
+              dlog('persistSave: ' + (typeof window.persistSave === 'function' ? 'OK' : 'ERRO'), typeof window.persistSave === 'function' ? '#4ade80' : '#f87171');
+              dlog('_currentUser: ' + (window._currentUser ? window._currentUser.email : 'NULL'), window._currentUser ? '#4ade80' : '#f87171');
+              dlog('state.rendas: ' + (window.state ? JSON.stringify(window.state.rendas?.length) + ' items' : 'state não existe'), '#c8ff57');
+
+              // Intercepta persistSave para logar chamadas
+              if (typeof window.persistSave === 'function') {
+                const orig = window.persistSave;
                 window.persistSave = async function() {
-                  const u = window._currentUser;
-                  dlog('persistSave chamado. user=' + (u ? u.email : 'NULL'), u ? '#4ade80' : '#f87171');
-                  return origPersist.apply(this, arguments);
+                  dlog('>>> persistSave disparado! user=' + (window._currentUser?.email || 'NULL'), window._currentUser ? '#4ade80' : '#f87171');
+                  const r = await orig.apply(this, arguments);
+                  dlog('<<< persistSave concluído', '#4ade80');
+                  return r;
                 };
-                dlog('persistSave interceptado OK', '#4ade80');
-              } else {
-                dlog('ERRO: persistSave não encontrado', '#f87171');
               }
-
-              if (typeof window.initApp === 'function') {
-                dlog('initApp disponível OK', '#4ade80');
-              } else {
-                dlog('ERRO: initApp não encontrado', '#f87171');
-              }
-
-              if (window._currentUser) {
-                dlog('_currentUser OK: ' + window._currentUser.email, '#4ade80');
-              } else {
-                dlog('_currentUser ainda null', '#f87171');
-              }
-            }, 1500);
+            }, 2500);
           });
         </script>
 
