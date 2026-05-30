@@ -6,9 +6,9 @@
 
       const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      // ── Variáveis de controle (antes do bootGuard para evitar ReferenceError) ──
-      let _currentUser = null;
-      let _authSuccessCalled = false;
+      // ── Variáveis de controle ──
+      var _currentUser = null;
+      var _authSuccessCalled = false;
       window._recoverySession = window._recoverySession || false;
 
       // ── Boot guard: verifica sessão antes de renderizar ──
