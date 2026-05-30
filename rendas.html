@@ -99,39 +99,6 @@
       </nav>
       <!-- ══ MAIN ══ -->
       <main class="main">
-        <!-- ══ DIAGNÓSTICO TEMPORÁRIO — remover após resolver ══ -->
-        <div id="diag-box" style="position:fixed;bottom:12px;right:12px;z-index:9999;background:#111318;border:1px solid #c8ff57;border-radius:10px;padding:12px 14px;font-size:11px;font-family:monospace;max-width:320px;max-height:200px;overflow-y:auto;line-height:1.6;">
-          <div style="color:#c8ff57;font-weight:700;margin-bottom:6px;">🔍 Diagnóstico</div>
-          <div id="diag-log"></div>
-        </div>
-        <script>
-          function dlog(msg, color) {
-            const el = document.getElementById('diag-log');
-            if (!el) return;
-            const d = document.createElement('div');
-            d.style.color = color || '#eeeef0';
-            d.textContent = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ' ' + msg;
-            el.appendChild(d);
-            el.scrollTop = el.scrollHeight;
-          }
-
-          // Intercepta persistSave para logar
-          document.addEventListener('DOMContentLoaded', () => {
-            dlog('DOM pronto', '#c8ff57');
-
-            // Aguarda auth.js carregar e sobrescreve persistSave com versão logada
-            setTimeout(() => {
-              try {
-                dlog('_currentUser: ' + (_currentUser ? _currentUser.email : 'NULL'), _currentUser ? '#4ade80' : '#f87171');
-                dlog('state.rendas: ' + (typeof state !== 'undefined' ? state.rendas?.length + ' items' : 'INEXISTENTE'), typeof state !== 'undefined' ? '#4ade80' : '#f87171');
-                dlog('Tentando addRenda de teste...', '#c8ff57');
-                addRenda();
-                dlog('addRenda OK — rendas agora: ' + state.rendas.length, '#4ade80');
-              } catch(e) { dlog('ERRO: ' + e.message, '#f87171'); }
-            }, 2500);
-          });
-        </script>
-
 
         <!-- ════════ RENDAS ════════ -->
         <div class="page active" id="page-rendas">
