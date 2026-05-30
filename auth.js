@@ -541,7 +541,8 @@
             console.error('[persistSave] ERRO Supabase:', error);
             showToast('⚠️ Erro ao salvar: ' + (error.message || error.code || JSON.stringify(error)), 'red');
           } else {
-            console.log('[persistSave] OK');
+            console.log('[persistSave] OK — rendas salvas:', state.rendas.length);
+            showToast('💾 Salvo! Rendas: ' + state.rendas.length, 'green');
           }
         } catch (e) {
           console.error('[persistSave] EXCEÇÃO:', e);
