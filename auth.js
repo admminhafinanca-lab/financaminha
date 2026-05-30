@@ -352,11 +352,11 @@
         // Inicializa o app
         try { initApp(); } catch(e) { console.error('[onAuthSuccess] initApp falhou:', e); }
 
-      // ── Hash-based navigation (from stub redirects e.g. saldo.html → dashboard.html#saldo) ──
+      // ── Hash-based navigation — apenas se a page existe no DOM (app.html) ──
       const _hashPage = window.location.hash.replace('#','');
       if (_hashPage && document.getElementById('page-' + _hashPage)) {
-        const navBtn = document.querySelector('.nav-btn[onclick*="nav(\'"+_hashPage+"\'"+"')"]') ||
-                       [...document.querySelectorAll('.nav-btn')].find(b => b.getAttribute('onclick')?.includes("'" + _hashPage + "'"));
+        const navBtn = [...document.querySelectorAll('.nav-btn')]
+          .find(b => b.getAttribute('onclick')?.includes("'" + _hashPage + "'"));
         if (navBtn) nav(_hashPage, navBtn);
       }
 
