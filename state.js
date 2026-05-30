@@ -1011,7 +1011,7 @@
           return;
         }
         state.investimentos.forEach((inv, i) => {
-          const info = TIPOS_INV.find(t => t.v === inv.tipo) || TIPOS_INV[0];
+          const info = TIPOS_INV.find(t => t.v === inv.tipo) || TIPOS_INV[0] || { taxa: 0.005, l: 'Padrão', ir: false };
           const tipoOpts = TIPOS_INV.map(t => `<option value="${t.v}" ${inv.tipo === t.v ? 'selected' : ''}>${t.l}</option>`).join('');
           // projeção 12 meses
           let s12 = inv.valor;
@@ -1122,7 +1122,7 @@
         const customRow = document.getElementById('sim-custom-row');
         if (customRow) customRow.style.display = tipo === 'custom' ? 'flex' : 'none';
         const info = TIPOS_INV.find(t => t.v === tipo) || TIPOS_INV[1];
-        const taxa = tipo === 'custom' ? g('sim-taxa') / 100 : info.taxa;
+        const taxa = tipo === 'custom' ? g('sim-taxa') / 100 : (info?.taxa ?? 0.005);
         const inicial = g('sim-inicial') || 0;
         const aporte = g('sim-aporte') || 0;
         const prazo = Math.max(1, g('sim-prazo') || 12);
