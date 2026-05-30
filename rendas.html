@@ -99,6 +99,55 @@
       </nav>
       <!-- ══ MAIN ══ -->
       <main class="main">
+        <!-- ══ DIAGNÓSTICO TEMPORÁRIO — remover após resolver ══ -->
+        <div id="diag-box" style="position:fixed;bottom:12px;right:12px;z-index:9999;background:#111318;border:1px solid #c8ff57;border-radius:10px;padding:12px 14px;font-size:11px;font-family:monospace;max-width:320px;max-height:200px;overflow-y:auto;line-height:1.6;">
+          <div style="color:#c8ff57;font-weight:700;margin-bottom:6px;">🔍 Diagnóstico</div>
+          <div id="diag-log"></div>
+        </div>
+        <script>
+          function dlog(msg, color) {
+            const el = document.getElementById('diag-log');
+            if (!el) return;
+            const d = document.createElement('div');
+            d.style.color = color || '#eeeef0';
+            d.textContent = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ' ' + msg;
+            el.appendChild(d);
+            el.scrollTop = el.scrollHeight;
+          }
+
+          // Intercepta persistSave para logar
+          document.addEventListener('DOMContentLoaded', () => {
+            dlog('DOM pronto', '#c8ff57');
+
+            // Aguarda auth.js carregar e sobrescreve persistSave com versão logada
+            setTimeout(() => {
+              const origPersist = window.persistSave;
+              if (typeof origPersist === 'function') {
+                window.persistSave = async function() {
+                  const u = window._currentUser;
+                  dlog('persistSave chamado. user=' + (u ? u.email : 'NULL'), u ? '#4ade80' : '#f87171');
+                  return origPersist.apply(this, arguments);
+                };
+                dlog('persistSave interceptado OK', '#4ade80');
+              } else {
+                dlog('ERRO: persistSave não encontrado', '#f87171');
+              }
+
+              if (typeof window.initApp === 'function') {
+                dlog('initApp disponível OK', '#4ade80');
+              } else {
+                dlog('ERRO: initApp não encontrado', '#f87171');
+              }
+
+              if (window._currentUser) {
+                dlog('_currentUser OK: ' + window._currentUser.email, '#4ade80');
+              } else {
+                dlog('_currentUser ainda null', '#f87171');
+              }
+            }, 1500);
+          });
+        </script>
+
 
         <!-- ════════ RENDAS ════════ -->
         <div class="page active" id="page-rendas">
