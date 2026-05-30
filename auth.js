@@ -319,7 +319,18 @@
         if (avatarEl) avatarEl.textContent = ini;
       }
 
+      function _dlog(msg, color) {
+        const el = document.getElementById('diag-log');
+        if (!el) return;
+        const d = document.createElement('div');
+        d.style.color = color || '#eeeef0';
+        d.textContent = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ' ' + msg;
+        el.appendChild(d);
+        el.scrollTop = el.scrollHeight;
+      }
+
       async function onAuthSuccess(user) {
+        _dlog('onAuthSuccess iniciado: ' + user.email, '#c8ff57');
         // Bloqueia acesso se e-mail não foi confirmado
         if (!user.email_confirmed_at) {
           await _sb.auth.signOut();
@@ -327,8 +338,9 @@
           return;
         }
         _currentUser = user;
+        _dlog('_currentUser setado OK', '#4ade80');
         // Registra/assume sessão única antes de qualquer coisa
-        try { await checkAndKillOtherSessions(user.id, ''); } catch(e) { console.warn('session check skipped', e); }
+        try { await checkAndKillOtherSessions(user.id, ''); _dlog('session check OK', '#4ade80'); } catch(e) { _dlog('session check ignorado: ' + e.message, '#f87171'); }
         // Exibe email provisório enquanto carrega o state
         const emailEl = document.getElementById('sidebar-user-email');
         if (emailEl) emailEl.textContent = user.email;
@@ -342,15 +354,15 @@
         // Inicia heartbeat de sessão única
         startSessionHeartbeat();
         // ── Carrega configurações globais do banco ANTES de tudo ──
-        await loadConfig();
-        // Verifica se usuário é admin (mostra botão na sidebar se for)
-        await checkAdminRole(user);
+        try { await loadConfig(); _dlog('loadConfig OK', '#4ade80'); } catch(e) { _dlog('loadConfig ERRO: ' + e.message, '#f87171'); }
+        // Verifica se usuário é admin
+        try { await checkAdminRole(user); } catch(e) { _dlog('checkAdminRole ignorado', '#7a7f96'); }
         // Carrega dados do usuário
-        try { await loadStateFromSupabase(); } catch(e) { console.error('[onAuthSuccess] loadState falhou:', e); }
+        try { const ok = await loadStateFromSupabase(); _dlog('loadState: ' + (ok ? 'OK, rendas=' + state.rendas.length : 'sem dados'), '#4ade80'); } catch(e) { _dlog('loadState ERRO: ' + e.message, '#f87171'); }
         // Atualiza nome com o do state (membro titular)
         try { updateSidebarUser(); } catch(e) {}
         // Inicializa o app
-        try { initApp(); } catch(e) { console.error('[onAuthSuccess] initApp falhou:', e); }
+        try { initApp(); _dlog('initApp OK', '#4ade80'); } catch(e) { _dlog('initApp ERRO: ' + e.message, '#f87171'); console.error('[onAuthSuccess] initApp falhou:', e); }
 
       // ── Hash-based navigation — apenas se a page existe no DOM (app.html) ──
       const _hashPage = window.location.hash.replace('#','');
