@@ -148,11 +148,17 @@
 
       // ══ NAV ══
       function nav(id, btn) {
+        const pageEl = document.getElementById('page-' + id);
+        // Se a página não existe no DOM, esta é uma SPA fragmentada — redireciona
+        if (!pageEl) {
+          location.href = id + '.html';
+          return;
+        }
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('page-' + id).classList.add('active');
-        btn.classList.add('active');
-        closeSidebar(); // fecha menu no mobile
+        pageEl.classList.add('active');
+        if (btn) btn.classList.add('active');
+        closeSidebar();
         if (id === 'calendario') { renderCalendario(); return; }
         setTimeout(() => calcular(), 50);
       }
@@ -216,8 +222,7 @@
         renderIdeal();
         renderPlano(extra, minDiv);
         simular();
-        const topbarSaldo = document.getElementById('topbar-saldo');
-        if (topbarSaldo) topbarSaldo.textContent = fmt(saldo);
+        document.getElementById('topbar-saldo').textContent = fmt(saldo);
 
         // Calendário no dashboard
         if (document.getElementById('dash-cal-mes-label')) renderDashCalendario();
