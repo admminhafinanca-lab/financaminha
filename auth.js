@@ -6,20 +6,28 @@
 
       const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+      // ── Variáveis de controle (antes do bootGuard para evitar ReferenceError) ──
+      let _currentUser = null;
+      let _authSuccessCalled = false;
+      window._recoverySession = window._recoverySession || false;
+
       // ── Boot guard: verifica sessão antes de renderizar ──
       (async function bootGuard() {
         const { data: { session } } = await _sb.auth.getSession();
         if (!session) {
-          // Só redireciona se não estamos no meio de um processo de auth (hash de recovery etc)
           const hash = window.location.hash;
           if (!hash.includes('type=recovery') && !hash.includes('access_token')) {
             location.href = 'index.html';
           }
           return;
         }
-        // Sessão válida — onAuthStateChange vai disparar SIGNED_IN e chamar onAuthSuccess
+        // Sessão válida — chama onAuthSuccess diretamente, sem depender do onAuthStateChange
+        // que em páginas já autenticadas (reload, navegação entre páginas) pode não disparar SIGNED_IN
+        if (!_authSuccessCalled) {
+          _authSuccessCalled = true;
+          await onAuthSuccess(session.user);
+        }
       })();
-      let _currentUser = null;
 
       // ── Verifica compra na Cakto via Edge Function ──
       async function verificarCompraCakto(email) {
@@ -615,8 +623,6 @@
       }
 
       // Intercepta o retorno do link de reset
-      window._recoverySession = window._recoverySession || false;
-      let _authSuccessCalled = false;
       // Guard: se não autenticado, volta para login
       _sb.auth.onAuthStateChange(async (event, session) => {
         if (event === 'PASSWORD_RECOVERY') {
