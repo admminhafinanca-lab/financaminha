@@ -121,21 +121,12 @@
 
             // Aguarda auth.js carregar e sobrescreve persistSave com versão logada
             setTimeout(() => {
-              dlog('initApp: ' + (typeof window.initApp === 'function' ? 'OK' : 'ERRO'), typeof window.initApp === 'function' ? '#4ade80' : '#f87171');
-              dlog('persistSave: ' + (typeof window.persistSave === 'function' ? 'OK' : 'ERRO'), typeof window.persistSave === 'function' ? '#4ade80' : '#f87171');
-              dlog('_currentUser: ' + (window._currentUser ? window._currentUser.email : 'NULL'), window._currentUser ? '#4ade80' : '#f87171');
-              dlog('state.rendas: ' + (window.state ? JSON.stringify(window.state.rendas?.length) + ' items' : 'state não existe'), '#c8ff57');
-
-              // Intercepta persistSave para logar chamadas
-              if (typeof window.persistSave === 'function') {
-                const orig = window.persistSave;
-                window.persistSave = async function() {
-                  dlog('>>> persistSave disparado! user=' + (window._currentUser?.email || 'NULL'), window._currentUser ? '#4ade80' : '#f87171');
-                  const r = await orig.apply(this, arguments);
-                  dlog('<<< persistSave concluído', '#4ade80');
-                  return r;
-                };
-              }
+              try {
+                dlog('initApp: ' + (typeof initApp === 'function' ? 'OK' : 'ERRO'), typeof initApp === 'function' ? '#4ade80' : '#f87171');
+                dlog('persistSave: ' + (typeof persistSave === 'function' ? 'OK' : 'ERRO'), typeof persistSave === 'function' ? '#4ade80' : '#f87171');
+                dlog('_currentUser: ' + (_currentUser ? _currentUser.email : 'NULL'), _currentUser ? '#4ade80' : '#f87171');
+                dlog('state.rendas: ' + (typeof state !== 'undefined' ? state.rendas?.length + ' items' : 'INEXISTENTE'), '#c8ff57');
+              } catch(e) { dlog('ERRO no diag: ' + e.message, '#f87171'); }
             }, 2500);
           });
         </script>
