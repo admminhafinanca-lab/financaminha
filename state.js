@@ -4,7 +4,8 @@
       const DB_KEY = 'financaminha_v3';
 
       const MEMBROS_DEFAULT = [{ id: 'm1', nome: 'Titular', tipo: 'adulto', idade: 30 }];
-      let state = {
+      // Expõe state no window para acesso entre scripts
+      window.state = {
         membros: [...MEMBROS_DEFAULT],
         rendas: [],
         essenciais: [],
@@ -18,9 +19,10 @@
         lastResetMonth: '',
         onboardingDone: false,
       };
+      const state = window.state;
 
-      let charts = {};
-      let _nextId = 100;
+      var charts = {};
+      var _nextId = 100;
       function uid(p) { return p + (++_nextId); }
 
       function syncNextId() {
@@ -176,7 +178,7 @@
       // ══════════════════════════════════════════
       //  MAIN CALCULAR
       // ══════════════════════════════════════════
-      let _saveTimer;
+      var _saveTimer;
 
       function debounceAutoSave() {
         clearTimeout(_saveTimer);
