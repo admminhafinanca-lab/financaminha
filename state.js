@@ -182,9 +182,21 @@
 
       function debounceAutoSave() {
         clearTimeout(_saveTimer);
-        _saveTimer = setTimeout(() => { persistSave().then(() => showSaveIndicator()); }, 1200);
+        _saveTimer = setTimeout(() => {
+          if (typeof persistSave === 'function') {
+            persistSave().then(() => { if (typeof showSaveIndicator === 'function') showSaveIndicator(); }).catch(e => console.error('[autoSave]', e));
+          }
+        }, 1200);
       }
-      function calcular() {
+      // Salva imediatamente sem depender do calcular() — usado nas páginas fragmentadas
+      function saveNow() {
+        if (typeof persistSave === 'function') {
+          clearTimeout(_saveTimer);
+          persistSave().then(() => { if (typeof showSaveIndicator === 'function') showSaveIndicator(); }).catch(e => console.error('[saveNow]', e));
+        }
+      }
+      function calcular() { try { _calcularInterno(); } catch(e) { console.error('[calcular] erro:', e); debounceAutoSave(); } }
+      function _calcularInterno() {
         syncBeneficios();
         syncEmerg();
 
@@ -224,7 +236,7 @@
         renderIdeal();
         renderPlano(extra, minDiv);
         simular();
-        document.getElementById('topbar-saldo').textContent = fmt(saldo);
+        const _tsEl = document.getElementById('topbar-saldo'); if (_tsEl) _tsEl.textContent = fmt(saldo);
 
         // Calendário no dashboard
         if (document.getElementById('dash-cal-mes-label')) renderDashCalendario();
@@ -407,9 +419,9 @@
         const hoje = new Date();
         const comp = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0');
         state.rendas.push({ id: uid('r'), nome: 'Nova renda', valor: 0, dia: 5, membro: state.membros[0]?.id || 'm1', tipo: 'fixo', competencia: comp });
-        renderRendas(); calcular();
+        renderRendas(); try { calcular(); } catch(e) { saveNow(); }
       }
-      function removeRenda(id) { state.rendas = state.rendas.filter(r => r.id !== id); renderRendas(); calcular(); }
+      function removeRenda(id) { state.rendas = state.rendas.filter(r => r.id !== id); renderRendas(); try { calcular(); } catch(e) { saveNow(); } }
       function renderRendas() {
         const el = document.getElementById('lista-rendas'); if (!el) return;
         el.innerHTML = '';
@@ -417,14 +429,14 @@
           el.innerHTML += `<div class="item-card">
       <div class="item-top">
         <span style="font-size:20px">💰</span>
-        <input class="item-name-inp" value="${esc(r.nome)}" onchange="state.rendas[${i}].nome=this.value;calcular()">
+        <input class="item-name-inp" value="${esc(r.nome)}" onchange="state.rendas[${i}].nome=this.value;try{calcular()}catch(e){saveNow()}">
         <span class="badge ${r.tipo === 'fixo' ? 'b-green' : 'b-yellow'}">${r.tipo}</span>
         <button class="rm-btn" onclick="removeRenda('${r.id}')">remover</button>
       </div>
       <div class="item-fields if-auto">
-        <div class="ifield"><label>Valor (R$)</label><input type="number" value="${r.valor}" oninput="state.rendas[${i}].valor=+this.value;calcular()"></div>
-        <div class="ifield"><label>Dia recebimento</label><input type="number" value="${r.dia}" min="1" max="31" oninput="state.rendas[${i}].dia=+this.value;calcular()"></div>
-        <div class="ifield"><label>Competência</label><input type="month" value="${r.competencia||''}" oninput="state.rendas[${i}].competencia=this.value;calcular()" style="color-scheme:dark"></div>
+        <div class="ifield"><label>Valor (R$)</label><input type="number" value="${r.valor}" oninput="state.rendas[${i}].valor=+this.value;try{calcular()}catch(e){saveNow()}"></div>
+        <div class="ifield"><label>Dia recebimento</label><input type="number" value="${r.dia}" min="1" max="31" oninput="state.rendas[${i}].dia=+this.value;try{calcular()}catch(e){saveNow()}"></div>
+        <div class="ifield"><label>Competência</label><input type="month" value="${r.competencia||''}" oninput="state.rendas[${i}].competencia=this.value;try{calcular()}catch(e){saveNow()}" style="color-scheme:dark"></div>
         <div class="ifield"><label>Membro</label><select onchange="state.rendas[${i}].membro=this.value">${membrosOptions(r.membro)}</select></div>
         <div class="ifield"><label>Tipo</label>
           <select onchange="state.rendas[${i}].tipo=this.value;renderRendas()">
