@@ -122,11 +122,12 @@
             // Aguarda auth.js carregar e sobrescreve persistSave com versão logada
             setTimeout(() => {
               try {
-                dlog('initApp: ' + (typeof initApp === 'function' ? 'OK' : 'ERRO'), typeof initApp === 'function' ? '#4ade80' : '#f87171');
-                dlog('persistSave: ' + (typeof persistSave === 'function' ? 'OK' : 'ERRO'), typeof persistSave === 'function' ? '#4ade80' : '#f87171');
                 dlog('_currentUser: ' + (_currentUser ? _currentUser.email : 'NULL'), _currentUser ? '#4ade80' : '#f87171');
-                dlog('state.rendas: ' + (typeof state !== 'undefined' ? state.rendas?.length + ' items' : 'INEXISTENTE'), '#c8ff57');
-              } catch(e) { dlog('ERRO no diag: ' + e.message, '#f87171'); }
+                dlog('state.rendas: ' + (typeof state !== 'undefined' ? state.rendas?.length + ' items' : 'INEXISTENTE'), typeof state !== 'undefined' ? '#4ade80' : '#f87171');
+                dlog('Tentando addRenda de teste...', '#c8ff57');
+                addRenda();
+                dlog('addRenda OK — rendas agora: ' + state.rendas.length, '#4ade80');
+              } catch(e) { dlog('ERRO: ' + e.message, '#f87171'); }
             }, 2500);
           });
         </script>
