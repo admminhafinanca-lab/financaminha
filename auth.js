@@ -415,7 +415,6 @@
       async function loadStateFromSupabase() {
         if (!_currentUser) { console.warn('[loadState] abortado — _currentUser é null'); return false; }
         try {
-          console.log('[loadState] buscando dados para user_id:', _currentUser.id);
           const { data, error } = await _sb.from('user_data')
             .select('state_json')
             .eq('user_id', _currentUser.id)
@@ -423,7 +422,6 @@
           if (error) {
             // PGRST116 = nenhuma linha encontrada — normal no primeiro acesso
             if (error.code === 'PGRST116') {
-              console.log('[loadState] nenhum dado salvo ainda — primeiro acesso');
             } else {
               console.error('[loadState] ERRO Supabase:', error);
               showToast('⚠️ Erro ao carregar dados: ' + (error.message || error.code), 'red');
@@ -432,7 +430,6 @@
           }
           if (!data?.state_json) { console.log('[loadState] state_json vazio'); return false; }
           const saved = JSON.parse(data.state_json);
-          console.log('[loadState] dados carregados com sucesso:', Object.keys(saved));
           if (saved.membros?.length) state.membros = saved.membros;
           if (saved.rendas?.length) state.rendas = saved.rendas;
           if (saved.essenciais?.length) state.essenciais = saved.essenciais;
@@ -451,9 +448,7 @@
       }
 
       async function persistSave() {
-        console.log('[persistSave] chamado. _currentUser:', _currentUser?.id || 'NULL');
         if (!_currentUser) {
-          console.warn('[persistSave] abortado — _currentUser é null. O login foi concluído?');
           return;
         }
         try {
@@ -483,10 +478,8 @@
               .single();
             if (existing?.state_json) {
               baseState = JSON.parse(existing.state_json);
-              console.log('[persistSave] merge base carregado do banco');
             }
           } catch(e) {
-            console.warn('[persistSave] sem dados anteriores no banco — salvando do zero');
           }
 
           // Campos array: só substitui se o state local tiver itens OU se a página
@@ -534,15 +527,13 @@
             updated_at: new Date().toISOString()
           };
 
-          console.log('[persistSave] salvando para user_id:', _currentUser.id, '| bytes:', payload.state_json.length);
 
           const { data, error } = await _sb.from('user_data').upsert(payload, { onConflict: 'user_id' });
           if (error) {
             console.error('[persistSave] ERRO Supabase:', error);
             showToast('⚠️ Erro ao salvar: ' + (error.message || error.code || JSON.stringify(error)), 'red');
           } else {
-            console.log('[persistSave] OK — rendas salvas:', state.rendas.length);
-            showToast('💾 Salvo! Rendas: ' + state.rendas.length, 'green');
+
           }
         } catch (e) {
           console.error('[persistSave] EXCEÇÃO:', e);
