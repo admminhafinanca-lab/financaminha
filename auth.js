@@ -17,14 +17,9 @@
           }
         } catch(e) {}
         const method = options.method || 'GET';
-        // Para upsert: usa método PATCH com filtro, ou POST com Prefer correto
-        const isUpsert = options.upsert === true;
-        const finalMethod = isUpsert ? 'POST' : method;
-        const preferHeader = isUpsert
-          ? 'resolution=merge-duplicates,return=minimal'
-          : (method === 'POST' ? 'return=minimal' : '');
+        const preferHeader = method === 'PATCH' ? 'return=representation' : '';
         const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
-          method: finalMethod,
+          method,
           headers: {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': 'Bearer ' + token,
@@ -33,6 +28,7 @@
           },
           body: options.body || undefined
         });
+        if (res.status === 204) return [];  // PATCH sem retorno = sucesso
         const text = await res.text();
         return text ? JSON.parse(text) : null;
       };
@@ -580,13 +576,24 @@
           };
 
 
-          const upsertResult = await sbFetch('user_data', {
-            upsert: true,
-            body: JSON.stringify(payload)
-          });
-          if (upsertResult && upsertResult.code) {
-            console.error('[persistSave] ERRO:', upsertResult);
-            showToast('⚠️ Erro ao salvar: ' + (upsertResult.message || upsertResult.code), 'red');
+          // Tenta PATCH (update) primeiro — sem risco de conflict
+          const patchRes = await sbFetch(
+            'user_data?user_id=eq.' + _currentUser.id,
+            { method: 'PATCH', body: JSON.stringify(payload) }
+          );
+          // Se PATCH não atualizou nada (registro não existe), faz POST (insert)
+          if (patchRes === null || (Array.isArray(patchRes) && patchRes.length === 0)) {
+            const insertRes = await sbFetch('user_data', {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            });
+            if (insertRes?.code) {
+              console.error('[persistSave] ERRO insert:', insertRes);
+              showToast('⚠️ Erro ao salvar: ' + (insertRes.message || insertRes.code), 'red');
+            }
+          } else if (patchRes?.code) {
+            console.error('[persistSave] ERRO patch:', patchRes);
+            showToast('⚠️ Erro ao salvar: ' + (patchRes.message || patchRes.code), 'red');
           }
 
 
