@@ -5,6 +5,10 @@
       const SUPABASE_ANON_KEY = 'sb_publishable_6rRbVuPIfuF56utFPfVzLg_waXyH5XS';
 
       const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      // Cliente separado para queries de dados — evita bloqueio pelo cliente de auth
+      const _sbData = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true }
+      });
 
       // ── Variáveis de controle ──
       var _currentUser = null;
@@ -415,7 +419,7 @@
       async function loadStateFromSupabase() {
         if (!_currentUser) { console.warn('[loadState] abortado — _currentUser é null'); return false; }
         try {
-          const { data, error } = await _sb.from('user_data')
+          const { data, error } = await _sbData.from('user_data')
             .select('state_json')
             .eq('user_id', _currentUser.id)
             .single();
@@ -473,7 +477,7 @@
           //    outras páginas com arrays vazios por falta de DOM.
           let baseState = {};
           try {
-            const { data: existing } = await _sb.from('user_data')
+            const { data: existing } = await _sbData.from('user_data')
               .select('state_json')
               .eq('user_id', _currentUser.id)
               .single();
@@ -529,7 +533,7 @@
           };
 
 
-          const { data, error } = await _sb.from('user_data').upsert(payload, { onConflict: 'user_id' });
+          const { data, error } = await _sbData.from('user_data').upsert(payload, { onConflict: 'user_id' });
           if (error) {
             console.error('[persistSave] ERRO Supabase:', error);
             showToast('⚠️ Erro ao salvar: ' + (error.message || error.code || JSON.stringify(error)), 'red');
