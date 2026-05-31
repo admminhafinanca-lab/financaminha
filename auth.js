@@ -327,7 +327,7 @@
         }
         _currentUser = user;
         // Registra/assume sessão única antes de qualquer coisa
-        try { await checkAndKillOtherSessions(user.id, ''); } catch(e) { }
+        // checkAndKillOtherSessions removido — causava travamento do cliente Supabase
         // Exibe email provisório enquanto carrega o state
         const emailEl = document.getElementById('sidebar-user-email');
         if (emailEl) emailEl.textContent = user.email;
@@ -339,7 +339,7 @@
           avatarEl.textContent = (n.split(' ').map(w => w[0]||'').join('').toUpperCase()||'?').slice(0,2);
         }
         // Inicia heartbeat de sessão única
-        startSessionHeartbeat();
+        // startSessionHeartbeat(); // removido — causava travamento do cliente Supabase
         // ── Carrega configurações globais do banco ANTES de tudo ──
         try { await loadConfig(); } catch(e) { }
         // Verifica se usuário é admin
