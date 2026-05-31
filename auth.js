@@ -379,6 +379,30 @@
         try { updateSidebarUser(); } catch(e) {}
         // Inicializa o app
         try { initApp(); } catch(e) { console.error('[onAuthSuccess] initApp falhou:', e); }
+        // Re-renderiza a seção ativa com os dados carregados do banco
+        try {
+          const pageEl = document.querySelector('.page.active');
+          if (pageEl) {
+            const pid = pageEl.id.replace('page-', '');
+            const renders = {
+              rendas:          () => { renderRendas(); try { calcular(); } catch(e) {} },
+              essenciais:      () => { renderEssenciais(); try { calcular(); } catch(e) {} },
+              'nao-essenciais':() => { renderNE(); try { calcular(); } catch(e) {} },
+              cartoes:         () => { renderCartoes(); try { calcular(); } catch(e) {} },
+              dividas:         () => { renderDividas(); try { calcular(); } catch(e) {} },
+              investimentos:   () => { renderInvestimentos(); try { calcular(); } catch(e) {} },
+              familia:         () => { renderFamilia(); try { calcular(); } catch(e) {} },
+              metas:           () => { renderMetas(); try { calcular(); } catch(e) {} },
+              beneficios:      () => { try { calcular(); } catch(e) {} },
+              emergencia:      () => { try { calcular(); } catch(e) {} },
+              ideal:           () => { try { calcular(); } catch(e) {} },
+              plano:           () => { try { calcular(); } catch(e) {} },
+              projecao:        () => { try { calcular(); } catch(e) {} },
+              saldo:           () => { try { calcular(); } catch(e) {} },
+            };
+            if (renders[pid]) renders[pid]();
+          }
+        } catch(e) { console.error('[onAuthSuccess] re-render falhou:', e); }
 
       // ── Hash-based navigation — apenas se a page existe no DOM (app.html) ──
       const _hashPage = window.location.hash.replace('#','');
