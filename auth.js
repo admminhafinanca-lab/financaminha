@@ -470,10 +470,10 @@
       }
 
       async function persistSave() {
-        if (!_currentUser) {
-          return;
+        if (!_currentUser) { return; }
         if (!_stateLoaded) { return; }
-        }
+
+
         try {
           function sanitizeNum(v, fallback = 0) {
             const n = parseFloat(String(v).replace(',', '.'));
