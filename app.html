@@ -522,5 +522,25 @@
 
   <script src="state.js"></script>
   <script src="auth.js"></script>
+  <script>
+    (function waitAndRender() {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (typeof state !== 'undefined' && typeof calcular === 'function') {
+          if (typeof _currentUser !== 'undefined' && _currentUser && typeof loadStateFromSupabase === 'function') {
+            const configPromise = typeof loadConfig === 'function' ? loadConfig() : Promise.resolve();
+            configPromise.then(() => loadStateFromSupabase()).then(() => {
+              try { calcular(); } catch(e) {}
+            });
+            clearInterval(interval);
+          } else if (attempts > 10 && typeof _currentUser !== 'undefined' && _currentUser === null) {
+            clearInterval(interval);
+          }
+        }
+        if (attempts > 50) clearInterval(interval);
+      }, 100);
+    })();
+  </script>
 </body>
 </html>
