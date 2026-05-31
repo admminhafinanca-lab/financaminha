@@ -666,9 +666,15 @@
       }
       function renderCartoes() {
         const el = document.getElementById('lista-cartoes'); if (!el) return;
+        // Se CC_BENEFITS_DB ainda não carregou, aguarda e tenta novamente
+        if (!CC_BENEFITS_DB || Object.keys(CC_BENEFITS_DB).length === 0) {
+          const configPromise = typeof loadConfig === 'function' ? loadConfig() : Promise.resolve();
+          configPromise.then(() => renderCartoes());
+          return;
+        }
         el.innerHTML = '';
         state.cartoes.forEach((c, i) => {
-          const db = CC_BENEFITS_DB[c.banco] || CC_BENEFITS_DB['Outro'];
+          const db = CC_BENEFITS_DB[c.banco] || CC_BENEFITS_DB['Outro'] || { cor:'var(--b1)', milhas:false, cashback:false, pontos:false, programa:'', beneficios:[] };
           const cor = db.cor;
           const parcTotal = c.parcelas.reduce((s, p) => s + p.valor, 0);
           const bancoOpts = BANCOS.map(b => `<option value="${b}" ${c.banco === b ? 'selected' : ''}>${b}</option>`).join('');
@@ -724,7 +730,7 @@
         const el = document.getElementById('cc-recomendacao'); if (!el) return;
         if (!state.cartoes.length) { el.innerHTML = '<div class="hbox hbox-blue">Nenhum cartão cadastrado.</div>'; return; }
         const scored = state.cartoes.map(c => {
-          const db = CC_BENEFITS_DB[c.banco] || CC_BENEFITS_DB['Outro'];
+          const db = CC_BENEFITS_DB[c.banco] || CC_BENEFITS_DB['Outro'] || { cor:'var(--b1)', milhas:false, cashback:false, pontos:false, programa:'', beneficios:[], score:0 };
           let score = 0;
           if (db.milhas) score += 3; if (db.cashback) score += 2; if (db.pontos) score += 1;
           if (c.anuidade === 0) score += 3; else if (c.anuidade < 400) score += 1;
