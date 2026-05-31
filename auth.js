@@ -6,6 +6,32 @@
 
       const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+      // ── Fetch direto ao REST API — lê token do localStorage sem chamar _sb ──
+      window.sbFetch = async function(path, options = {}) {
+        // Pega token direto do localStorage — evita deadlock com o cliente GoTrue
+        let token = SUPABASE_ANON_KEY;
+        try {
+          const key = Object.keys(localStorage).find(k => k.includes('auth-token') || k.includes('supabase.auth'));
+          if (key) {
+            const raw = JSON.parse(localStorage.getItem(key));
+            token = raw?.access_token || raw?.currentSession?.access_token || SUPABASE_ANON_KEY;
+          }
+        } catch(e) {}
+        const method = options.method || 'GET';
+        const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+          method,
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json',
+            'Prefer': method === 'POST' ? 'resolution=merge-duplicates,return=minimal' : '',
+          },
+          body: options.body || undefined
+        });
+        const text = await res.text();
+        return text ? JSON.parse(text) : null;
+      };
+
 
       // ── Variáveis de controle ──
       var _currentUser = null;
