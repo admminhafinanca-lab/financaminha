@@ -443,6 +443,7 @@
           if (saved.lastResetMonth) state.lastResetMonth = saved.lastResetMonth;
           if (saved.onboardingDone) state.onboardingDone = saved.onboardingDone;
           syncNextId();
+          console.log('[loadState] carregado — rendas:', state.rendas.length, '| essenciais:', state.essenciais.length);
           return true;
         } catch (e) { console.error('[loadState] EXCEÇÃO:', e); return false; }
       }
@@ -488,9 +489,9 @@
             const local = sanitize ? sanitizeItems(localArr) : (localArr || []);
             const pageEl = document.getElementById('page-' + key) ||
                            document.getElementById('lista-' + key);
-            // Se o elemento da seção existe no DOM desta página, esta página é dona do campo
+            const source = pageEl ? 'local(' + local.length + ')' : 'banco(' + (baseState[key]?.length || 0) + ')';
+            console.log('[merge] ' + key + ' → ' + source);
             if (pageEl) return local;
-            // Senão, preserva o que está no banco
             return baseState[key] || local;
           }
 
