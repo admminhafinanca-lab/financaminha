@@ -277,9 +277,15 @@
       function doLogout() {
         const btn = document.getElementById('btn-logout');
         if (btn) { btn.disabled = true; btn.textContent = 'Saindo...'; }
-        _sb.auth.signOut().finally(() => {
-          location.href = 'index.html';
-        });
+        // Limpa sessão direto do localStorage e redireciona — não depende do cliente _sb
+        try {
+          Object.keys(localStorage)
+            .filter(k => k.includes('supabase') || k.includes('sb-'))
+            .forEach(k => localStorage.removeItem(k));
+        } catch(e) {}
+        // Tenta signOut via _sb mas não bloqueia o redirect
+        try { _sb.auth.signOut().catch(() => {}); } catch(e) {}
+        setTimeout(() => { location.href = 'index.html'; }, 300);
       }
 
       // ── Controle de sessão única ──
