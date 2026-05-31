@@ -2339,7 +2339,9 @@
       };
 
       function showOnboarding() {
-        document.getElementById('onboarding-modal').style.display = 'flex';
+        const el = document.getElementById('onboarding-modal');
+        if (!el) return;
+        el.style.display = 'flex';
         obGoStep(1);
       }
 
