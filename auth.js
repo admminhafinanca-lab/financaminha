@@ -479,7 +479,7 @@
           if (saved.rendas?.length) state.rendas = saved.rendas;
           if (saved.essenciais?.length) state.essenciais = saved.essenciais;
           if (saved.naoEssenciais?.length) state.naoEssenciais = saved.naoEssenciais;
-          if (saved.cartoes?.length) state.cartoes = saved.cartoes;
+          if (saved.cartoes?.length) state.cartoes = saved.cartoes.map(c => ({ ...c, parcelas: Array.isArray(c.parcelas) ? c.parcelas : [] }));
           if (saved.dividas?.length) state.dividas = saved.dividas;
           if (saved.investimentos?.length) state.investimentos = saved.investimentos;
           if (saved.emergAtual !== undefined) state.emergAtual = saved.emergAtual;
