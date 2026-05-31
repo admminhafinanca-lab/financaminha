@@ -33,9 +33,11 @@
       };
 
 
+
       // ── Variáveis de controle ──
       var _currentUser = null;
       var _authSuccessCalled = false;
+      var _stateLoaded = false;
       window._recoverySession = window._recoverySession || false;
 
       // ── Boot guard: verifica sessão antes de renderizar ──
@@ -461,6 +463,7 @@
           if (saved.lastResetMonth) state.lastResetMonth = saved.lastResetMonth;
           if (saved.onboardingDone) state.onboardingDone = saved.onboardingDone;
           syncNextId();
+          _stateLoaded = true;
           console.log('[loadState] carregado — rendas:', state.rendas.length, '| essenciais:', state.essenciais.length);
           return true;
         } catch (e) { console.error('[loadState] EXCEÇÃO:', e); return false; }
@@ -469,6 +472,7 @@
       async function persistSave() {
         if (!_currentUser) {
           return;
+        if (!_stateLoaded) { return; }
         }
         try {
           function sanitizeNum(v, fallback = 0) {
