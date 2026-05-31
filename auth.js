@@ -8,7 +8,6 @@
 
       // ── Fetch direto ao REST API — lê token do localStorage sem chamar _sb ──
       window.sbFetch = async function(path, options = {}) {
-        // Pega token direto do localStorage — evita deadlock com o cliente GoTrue
         let token = SUPABASE_ANON_KEY;
         try {
           const key = Object.keys(localStorage).find(k => k.includes('auth-token') || k.includes('supabase.auth'));
@@ -18,13 +17,19 @@
           }
         } catch(e) {}
         const method = options.method || 'GET';
+        // Para upsert: usa método PATCH com filtro, ou POST com Prefer correto
+        const isUpsert = options.upsert === true;
+        const finalMethod = isUpsert ? 'POST' : method;
+        const preferHeader = isUpsert
+          ? 'resolution=merge-duplicates,return=minimal'
+          : (method === 'POST' ? 'return=minimal' : '');
         const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
-          method,
+          method: finalMethod,
           headers: {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json',
-            'Prefer': method === 'POST' ? 'resolution=merge-duplicates,return=minimal' : '',
+            ...(preferHeader ? { 'Prefer': preferHeader } : {}),
           },
           body: options.body || undefined
         });
@@ -576,9 +581,7 @@
 
 
           const upsertResult = await sbFetch('user_data', {
-            method: 'POST',
-            prefer: 'resolution=merge-duplicates',
-            headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+            upsert: true,
             body: JSON.stringify(payload)
           });
           if (upsertResult && upsertResult.code) {
