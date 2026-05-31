@@ -676,6 +676,7 @@
         state.cartoes.forEach((c, i) => {
           const db = CC_BENEFITS_DB[c.banco] || CC_BENEFITS_DB['Outro'] || { cor:'var(--b1)', milhas:false, cashback:false, pontos:false, programa:'', beneficios:[] };
           const cor = db.cor;
+          if (!Array.isArray(c.parcelas)) c.parcelas = [];
           const parcTotal = c.parcelas.reduce((s, p) => s + p.valor, 0);
           const bancoOpts = BANCOS.map(b => `<option value="${b}" ${c.banco === b ? 'selected' : ''}>${b}</option>`).join('');
           const tipoOpts = TIPOS_CC.map(t => `<option value="${t.toLowerCase()}" ${c.tipo === t.toLowerCase() ? 'selected' : ''}>${t}</option>`).join('');
