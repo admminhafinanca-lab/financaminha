@@ -5,10 +5,7 @@
       const SUPABASE_ANON_KEY = 'sb_publishable_6rRbVuPIfuF56utFPfVzLg_waXyH5XS';
 
       const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      // Cliente separado para queries de dados — evita bloqueio pelo cliente de auth
-      const _sbData = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true }
-      });
+
 
       // ── Variáveis de controle ──
       var _currentUser = null;
@@ -419,21 +416,12 @@
       async function loadStateFromSupabase() {
         if (!_currentUser) { console.warn('[loadState] abortado — _currentUser é null'); return false; }
         try {
-          const { data, error } = await _sbData.from('user_data')
-            .select('state_json')
-            .eq('user_id', _currentUser.id)
-            .single();
-          if (error) {
-            // PGRST116 = nenhuma linha encontrada — normal no primeiro acesso
-            if (error.code === 'PGRST116') {
-            } else {
-              console.error('[loadState] ERRO Supabase:', error);
-              showToast('⚠️ Erro ao carregar dados: ' + (error.message || error.code), 'red');
-            }
-            return false;
-          }
-          if (!data?.state_json) { console.log('[loadState] state_json vazio'); return false; }
-          const saved = JSON.parse(data.state_json);
+          const rows = await sbFetch('user_data?select=state_json&user_id=eq.' + _currentUser.id + '&limit=1');
+          if (!rows || rows.length === 0) { return false; }
+          if (rows[0]?.code === 'PGRST116') { return false; }
+          const row = rows[0];
+          if (!row?.state_json) { return false; }
+          const saved = typeof row.state_json === 'string' ? JSON.parse(row.state_json) : row.state_json;
           if (saved.membros?.length) state.membros = saved.membros;
           if (saved.rendas?.length) state.rendas = saved.rendas;
           if (saved.essenciais?.length) state.essenciais = saved.essenciais;
@@ -477,15 +465,15 @@
           //    outras páginas com arrays vazios por falta de DOM.
           let baseState = {};
           try {
-            const { data: existing } = await _sbData.from('user_data')
-              .select('state_json')
-              .eq('user_id', _currentUser.id)
-              .single();
-            if (existing?.state_json) {
-              baseState = JSON.parse(existing.state_json);
+            const mergeRows = await sbFetch('user_data?select=state_json&user_id=eq.' + _currentUser.id + '&limit=1');
+            if (mergeRows && mergeRows.length > 0 && mergeRows[0]?.state_json) {
+              const raw = mergeRows[0].state_json;
+              baseState = typeof raw === 'string' ? JSON.parse(raw) : raw;
             }
           } catch(e) {
           }
+
+
 
           // Campos array: só substitui se o state local tiver itens OU se a página
           // é responsável pelo campo (elemento DOM da seção existe na página atual).
@@ -533,13 +521,22 @@
           };
 
 
-          const { data, error } = await _sbData.from('user_data').upsert(payload, { onConflict: 'user_id' });
-          if (error) {
-            console.error('[persistSave] ERRO Supabase:', error);
-            showToast('⚠️ Erro ao salvar: ' + (error.message || error.code || JSON.stringify(error)), 'red');
-          } else {
-
+          const upsertResult = await sbFetch('user_data', {
+            method: 'POST',
+            prefer: 'resolution=merge-duplicates',
+            headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify(payload)
+          });
+          if (upsertResult && upsertResult.code) {
+            console.error('[persistSave] ERRO:', upsertResult);
+            showToast('⚠️ Erro ao salvar: ' + (upsertResult.message || upsertResult.code), 'red');
           }
+
+
+
+
+
+
         } catch (e) {
           console.error('[persistSave] EXCEÇÃO:', e);
           showToast('⚠️ Erro inesperado ao salvar: ' + e.message, 'red');
