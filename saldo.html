@@ -268,7 +268,8 @@
         attempts++;
         if (typeof state !== 'undefined' && typeof calcular === 'function') {
           if (typeof _currentUser !== 'undefined' && _currentUser && typeof loadStateFromSupabase === 'function') {
-            loadStateFromSupabase().then(() => {
+            const configPromise = typeof loadConfig === 'function' ? loadConfig() : Promise.resolve();
+            configPromise.then(() => loadStateFromSupabase()).then(() => {
               try { calcular(); } catch(e) {}
             });
             clearInterval(interval);
