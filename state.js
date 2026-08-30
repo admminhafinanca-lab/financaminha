@@ -1342,7 +1342,7 @@
         const tipEl = document.getElementById('ideal-tip');
         if (tipEl) {
           const totalPct = ideais.reduce((s, r) => s + r.pct, 0);
-          tipEl.textContent = `Base: ${fmt(renda)}/mês · ${pessoas} pessoa${pessoas > 1 ? 's' : ''}${filhos ? ' + filhos' : ''}${idosos ? ' + idosos' : ''} · ${totalPct}% alocados, ~${100 - totalPct}% livres.`;
+          tipEl.textContent = `Base (rendas + benefícios): ${fmt(renda)}/mês · ${pessoas} pessoa${pessoas > 1 ? 's' : ''}${filhos ? ' + filhos' : ''}${idosos ? ' + idosos' : ''} · ${totalPct}% alocados, ~${100 - totalPct}% livres.`;
         }
       }
 
