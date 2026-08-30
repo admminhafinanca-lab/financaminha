@@ -18,6 +18,7 @@
         metas: [],
         lastResetMonth: '',
         onboardingDone: false,
+        idealConfig: { pessoas: 1, filhos: 0, idosos: 0, veiculo: 1, cidade: 1 },
       };
       const state = window.state;
 
@@ -1264,11 +1265,27 @@
         const veiculoEl = document.getElementById('ideal-veiculo');
         const cidadeEl = document.getElementById('ideal-cidade');
 
+        // ── Na primeira renderização da sessão, restaura os campos com o que veio salvo ──
+        if (!window._idealConfigLoaded) {
+          const ic = state.idealConfig || {};
+          if (pessoasEl && ic.pessoas != null) pessoasEl.value = ic.pessoas;
+          if (filhosEl && ic.filhos != null) filhosEl.value = ic.filhos;
+          if (idososEl && ic.idosos != null) idososEl.value = ic.idosos;
+          if (veiculoEl && ic.veiculo != null) veiculoEl.value = ic.veiculo;
+          if (cidadeEl && ic.cidade != null) cidadeEl.value = ic.cidade;
+          window._idealConfigLoaded = true;
+        }
+
         const pessoas = Math.max(1, +(pessoasEl?.value) || 1);
         const filhos = +(filhosEl?.value) || 0;
         const idosos = +(idososEl?.value) || 0;
         const veiculo = +(veiculoEl?.value) || 1;
         const cidade = +(cidadeEl?.value) || 1;
+
+        // ── Grava a config atual no state e agenda o autosave ──
+        state.idealConfig = { pessoas, filhos, idosos, veiculo, cidade };
+        debounceAutoSave();
+
         const renda = getTotRenda() + getTotBenef();
 
         if (!renda) {
