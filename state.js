@@ -1281,17 +1281,26 @@
         const fi = idosos ? 1.1 : 1;
         const fc = cidade;
 
-        const ideais = [
-          { cat: 'Moradia', pct: Math.round(28 * fc), atual: state.essenciais.filter(e => e.cat === 'moradia').reduce((s, e) => s + e.valor, 0) },
-          { cat: 'Alimentação', pct: Math.round(13 * fp * ff), atual: state.essenciais.filter(e => e.cat === 'alimentacao').reduce((s, e) => s + e.valor, 0) },
-          { cat: 'Transporte', pct: veiculo ? 10 : 5, atual: state.naoEssenciais.filter(n => n.cat === 'transporte').reduce((s, n) => s + n.valor, 0) },
-          { cat: 'Saúde', pct: Math.round(6 * fi * fp), atual: state.essenciais.filter(e => e.cat === 'saude').reduce((s, e) => s + e.valor, 0) },
-          { cat: 'Educação', pct: filhos ? 10 : 5, atual: state.essenciais.filter(e => e.cat === 'educacao').reduce((s, e) => s + e.valor, 0) },
-          { cat: 'Lazer', pct: 5, atual: state.naoEssenciais.filter(n => n.cat === 'lazer').reduce((s, n) => s + n.valor, 0) },
-          { cat: 'Investimentos', pct: 10, atual: getTotAporteInv() },
-          { cat: 'Dívidas (máx)', pct: 20, atual: getTotDivMin() },
-          { cat: 'Imprevistos', pct: 5, atual: state.naoEssenciais.filter(n => n.cat === 'outros').reduce((s, n) => s + n.valor, 0) },
+        // ── Pesos brutos (antes de normalizar) ──
+        const pesos = [
+          { cat: 'Moradia', peso: 28 * fc, atual: state.essenciais.filter(e => e.cat === 'moradia').reduce((s, e) => s + e.valor, 0) },
+          { cat: 'Alimentação', peso: 13 * fp * ff, atual: state.essenciais.filter(e => e.cat === 'alimentacao').reduce((s, e) => s + e.valor, 0) },
+          { cat: 'Transporte', peso: veiculo ? 10 : 5, atual: state.naoEssenciais.filter(n => n.cat === 'transporte').reduce((s, n) => s + n.valor, 0) },
+          { cat: 'Saúde', peso: 6 * fi * fp, atual: state.essenciais.filter(e => e.cat === 'saude').reduce((s, e) => s + e.valor, 0) },
+          { cat: 'Educação', peso: filhos ? 10 : 5, atual: state.essenciais.filter(e => e.cat === 'educacao').reduce((s, e) => s + e.valor, 0) },
+          { cat: 'Lazer', peso: 5, atual: state.naoEssenciais.filter(n => n.cat === 'lazer').reduce((s, n) => s + n.valor, 0) },
+          { cat: 'Investimentos', peso: 10, atual: getTotAporteInv() },
+          { cat: 'Dívidas (máx)', peso: 20, atual: getTotDivMin() },
+          { cat: 'Imprevistos', peso: 5, atual: state.naoEssenciais.filter(n => n.cat === 'outros').reduce((s, n) => s + n.valor, 0) },
         ];
+
+        // ── Normaliza os pesos para que a soma nunca ultrapasse ALVO_ALOCADO% da renda ──
+        // (evita que ajustes de família/cidade/veículo somem mais de 100% de "ideal")
+        const ALVO_ALOCADO = 80; // % da renda alocado nas categorias; o restante fica livre/reserva
+        const somaPesos = pesos.reduce((s, p) => s + p.peso, 0);
+        const fatorNorm = somaPesos > 0 ? (ALVO_ALOCADO / somaPesos) : 0;
+
+        const ideais = pesos.map(p => ({ cat: p.cat, pct: Math.round(p.peso * fatorNorm), atual: p.atual }));
 
         el.innerHTML = ideais.map(row => {
           const idealVal = Math.round(renda * row.pct / 100);
