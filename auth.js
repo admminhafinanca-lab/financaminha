@@ -493,6 +493,7 @@
           if (saved.metas?.length) state.metas = saved.metas;
           if (saved.lastResetMonth) state.lastResetMonth = saved.lastResetMonth;
           if (saved.onboardingDone) state.onboardingDone = saved.onboardingDone;
+          if (saved.idealConfig) state.idealConfig = { ...state.idealConfig, ...saved.idealConfig };
           syncNextId();
           _stateLoaded = true;
           console.log('[loadState] carregado — rendas:', state.rendas.length, '| essenciais:', state.essenciais.length);
@@ -573,6 +574,15 @@
               vsaude: sanitizeNum(state.beneficios?.vsaude),
               voutra: sanitizeNum(state.beneficios?.voutra),
             } : (baseState.beneficios || state.beneficios),
+            // Config familiar da aba "Valores ideais": só grava a partir desta página,
+            // senão preserva o que já estava salvo no banco.
+            idealConfig: document.getElementById('page-ideal') ? {
+              pessoas: sanitizeNum(state.idealConfig?.pessoas, 1),
+              filhos:  sanitizeNum(state.idealConfig?.filhos, 0),
+              idosos:  sanitizeNum(state.idealConfig?.idosos, 0),
+              veiculo: sanitizeNum(state.idealConfig?.veiculo, 1),
+              cidade:  sanitizeNum(state.idealConfig?.cidade, 1),
+            } : (baseState.idealConfig || state.idealConfig),
           };
 
           const payload = {
