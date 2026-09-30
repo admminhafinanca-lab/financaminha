@@ -399,6 +399,7 @@
               dividas:         () => { renderDividas(); try { calcular(); } catch(e) {} },
               investimentos:   () => { renderInvestimentos(); try { calcular(); } catch(e) {} },
               familia:         () => { renderFamilia(); try { calcular(); } catch(e) {} },
+              pets:            () => { renderPets(); try { calcular(); } catch(e) {} },
               metas:           () => { renderMetas(); try { calcular(); } catch(e) {} },
               beneficios:      () => { try { calcular(); } catch(e) {} },
               emergencia:      () => { try { calcular(); } catch(e) {} },
@@ -482,6 +483,7 @@
           if (!row?.state_json) { return false; }
           const saved = typeof row.state_json === 'string' ? JSON.parse(row.state_json) : row.state_json;
           if (saved.membros?.length) state.membros = saved.membros;
+          if (saved.pets?.length) state.pets = saved.pets;
           if (saved.rendas?.length) state.rendas = saved.rendas;
           if (saved.essenciais?.length) state.essenciais = saved.essenciais;
           if (saved.naoEssenciais?.length) state.naoEssenciais = saved.naoEssenciais;
@@ -558,6 +560,7 @@
             emergAtual:      sanitizeNum(state.emergAtual),
             // Campos array: merge inteligente por presença de DOM
             membros:         mergeArray('membros',      state.membros,       false),
+            pets:            mergeArray('pets',         state.pets,          false),
             rendas:          mergeArray('rendas',       state.rendas),
             essenciais:      mergeArray('essenciais',   state.essenciais),
             naoEssenciais:   mergeArray('nao-essenciais', state.naoEssenciais),
