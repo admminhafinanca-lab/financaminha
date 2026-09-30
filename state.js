@@ -7,6 +7,7 @@
       // Expõe state no window para acesso entre scripts
       window.state = {
         membros: [...MEMBROS_DEFAULT],
+        pets: [],
         rendas: [],
         essenciais: [],
         naoEssenciais: [],
@@ -30,7 +31,7 @@
         const allIds = [
           ...state.rendas, ...state.essenciais, ...state.naoEssenciais,
           ...state.cartoes, ...state.dividas, ...state.investimentos,
-          ...state.metas, ...state.membros
+          ...state.metas, ...state.membros, ...(state.pets || [])
         ].map(x => parseInt((x.id || '').replace(/\D/g, ''))).filter(n => !isNaN(n));
         if (allIds.length) _nextId = Math.max(...allIds) + 1;
       }
@@ -81,6 +82,9 @@
       });
 
       async function loadConfig() {
+        try { await _loadConfigBase(); } finally { ensurePetCat(); }
+      }
+      async function _loadConfigBase() {
         try {
           const rows = await sbFetch('app_config?select=chave,valor');
           if (!rows || !Array.isArray(rows)) throw new Error('sem dados');
@@ -262,10 +266,10 @@
       // ── Calcula custo de um membro somando suas despesas do state ──
       function getCustoMembro(membroId) {
         const despAll = [...state.essenciais, ...state.naoEssenciais];
-        const total = despAll.filter(d => d.membro === membroId).reduce((s, d) => s + d.valor, 0);
+        const total = despAll.filter(d => d.membro === membroId && !temPet(d)).reduce((s, d) => s + d.valor, 0);
         // breakdown por cat
         const cats = {};
-        despAll.filter(d => d.membro === membroId).forEach(d => {
+        despAll.filter(d => d.membro === membroId && !temPet(d)).forEach(d => {
           cats[d.cat] = (cats[d.cat] || 0) + d.valor;
         });
         return { total, cats };
@@ -356,12 +360,25 @@
       }
 
       function renderFamiliaTotais() {
+        renderFamiliaPets();
         const el = document.getElementById('familia-totais');
         if (!el) return;
         if (!state.membros.length) { el.innerHTML = '<div class="hbox hbox-blue">Nenhum membro.</div>'; return; }
 
         const custos = state.membros.map(m => ({ m, c: getCustoMembro(m.id) }));
-        const totGeral = custos.reduce((s, x) => s + x.c.total, 0);
+        const totGeral = custos.reduce((s, x) => s + x.c.total, 0) + getTotPets();
+        const petRowsHtml = (state.pets || []).map(p => {
+          const c = getCustoPet(p.id);
+          const pct = totGeral > 0 ? clamp(c.total / totGeral * 100, 0, 100) : 0;
+          return `<div class="card-row">
+      <label>${PET_ICONE[p.especie] || '🐾'} ${esc(p.nome)} <span style="font-size:10px;color:var(--muted)">(pet)</span></label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-weight:600;color:var(--orange)">${fmt(c.total)}</span>
+        <span style="font-size:10px;color:var(--muted)">${Math.round(pct)}%</span>
+        <div class="prog" style="width:80px"><div class="prog-fill" style="width:${pct}%;background:var(--orange)"></div></div>
+      </div>
+    </div>`;
+        }).join('');
 
         el.innerHTML = custos.map(({ m, c }) => {
           const pct = totGeral > 0 ? clamp(c.total / totGeral * 100, 0, 100) : 0;
@@ -373,14 +390,14 @@
         <div class="prog" style="width:80px"><div class="prog-fill" style="width:${pct}%;background:var(--orange)"></div></div>
       </div>
     </div>`;
-        }).join('') + `<div class="card-row" style="border-top:1px solid var(--b2);padding-top:10px;margin-top:4px">
+        }).join('') + petRowsHtml + `<div class="card-row" style="border-top:1px solid var(--b2);padding-top:10px;margin-top:4px">
     <label style="font-weight:600;color:var(--text)">Total família/mês</label>
     <span style="color:var(--orange);font-weight:700;font-size:16px;font-family:var(--ff)">${fmt(totGeral)}</span>
   </div>`;
 
         // chart
-        const cats = ['Moradia', 'Alimentação', 'Saúde', 'Transporte', 'Educação', 'Lazer', 'Pessoal', 'Outros'];
-        const catKeys = ['moradia', 'alimentacao', 'saude', 'transporte', 'educacao', 'lazer', 'pessoal', 'outros'];
+        const cats = ['Moradia', 'Alimentação', 'Saúde', 'Transporte', 'Educação', 'Lazer', 'Pessoal', 'Outros', 'Pets'];
+        const catKeys = ['moradia', 'alimentacao', 'saude', 'transporte', 'educacao', 'lazer', 'pessoal', 'outros', 'pet'];
         const vals = catKeys.map(k => [...state.essenciais, ...state.naoEssenciais].filter(d => d.cat === k).reduce((s, d) => s + d.valor, 0));
         const nonZero = cats.map((c, i) => ({ c, v: vals[i] })).filter(x => x.v > 0);
 
@@ -392,7 +409,7 @@
             data: {
               labels: nonZero.map(x => x.c), datasets: [{
                 data: nonZero.map(x => x.v),
-                backgroundColor: ['rgba(96,165,250,.7)', 'rgba(74,222,128,.7)', 'rgba(248,113,113,.7)', 'rgba(251,191,36,.7)', 'rgba(167,139,250,.7)', 'rgba(251,146,60,.7)', 'rgba(244,114,182,.7)', 'rgba(122,127,150,.7)'],
+                backgroundColor: ['rgba(96,165,250,.7)', 'rgba(74,222,128,.7)', 'rgba(248,113,113,.7)', 'rgba(251,191,36,.7)', 'rgba(167,139,250,.7)', 'rgba(251,146,60,.7)', 'rgba(244,114,182,.7)', 'rgba(122,127,150,.7)', 'rgba(34,211,238,.7)'],
                 borderRadius: 6, borderSkipped: false
               }]
             },
@@ -406,6 +423,220 @@
             }
           });
         }
+      }
+
+      // ══════════════════════════════════════════
+      //  PETS
+      //  Gastos de pet vivem em state.essenciais (campo `pet` = id do pet).
+      //  Despesa vinculada a um pet NÃO entra no custo do membro (evita duplicidade).
+      // ══════════════════════════════════════════
+      const PET_ICONE = { cachorro: '🐶', gato: '🐱', ave: '🐦', peixe: '🐠', roedor: '🐹', reptil: '🦎', outro: '🐾' };
+      const PET_ESPECIE_LABEL = { cachorro: 'Cachorro', gato: 'Gato', ave: 'Ave', peixe: 'Peixe', roedor: 'Roedor', reptil: 'Réptil', outro: 'Outro' };
+
+      // true só se a despesa aponta para um pet que ainda existe (pet removido => volta a contar no membro)
+      function temPet(d) { return !!d && !!d.pet && (state.pets || []).some(p => p.id === d.pet); }
+      function petNome(id) { const p = (state.pets || []).find(x => x.id === id); return p ? p.nome : ''; }
+      function petsOptions(selected = '') {
+        return '<option value="">— nenhum —</option>' + (state.pets || []).map(p =>
+          `<option value="${esc(p.id)}" ${p.id === selected ? 'selected' : ''}>${PET_ICONE[p.especie] || '🐾'} ${esc(p.nome)}</option>`
+        ).join('');
+      }
+
+      function getCustoPet(petId) {
+        const itens = state.essenciais.filter(d => d.pet === petId);
+        let total = 0, fixo = 0;
+        const cats = {};
+        itens.forEach(d => {
+          const v = +d.valor || 0;
+          total += v;
+          if (d.fixo) fixo += v;
+          cats[d.cat] = (cats[d.cat] || 0) + v;
+        });
+        return { total, fixo, variavel: total - fixo, cats, qtd: itens.length };
+      }
+      function getTotPets() { return (state.pets || []).reduce((s, p) => s + getCustoPet(p.id).total, 0); }
+      function getTotFamilia() { return state.membros.reduce((s, m) => s + getCustoMembro(m.id).total, 0) + getTotPets(); }
+
+      function addPet() {
+        if (!state.pets) state.pets = [];
+        state.pets.push({ id: uid('p'), nome: 'Novo pet', especie: 'cachorro', raca: '', idade: 0 });
+        renderPets();
+        debounceAutoSave();
+      }
+      function removePet(id) {
+        const nome = petNome(id) || 'este pet';
+        if (!confirm('Remover ' + nome + '? Os gastos vinculados voltam a contar no membro responsável.')) return;
+        state.pets = (state.pets || []).filter(p => p.id !== id);
+        renderPets(); renderFamiliaTotais();
+        debounceAutoSave();
+      }
+      function atualizarPet(id, campo, valor) {
+        const p = (state.pets || []).find(x => x.id === id);
+        if (!p) return;
+        p[campo] = valor;
+        if (campo === 'especie') renderPets();
+        renderFamiliaTotais();
+        debounceAutoSave();
+      }
+
+      // Vincula / desvincula uma despesa essencial a um pet
+      function setPetEssencial(id, petId) {
+        const e = state.essenciais.find(x => x.id === id);
+        if (!e) return;
+        e.pet = petId || '';
+        if (e.pet && (!e.cat || e.cat === 'outros')) e.cat = 'pet';
+        renderEssenciais(); renderMembros(); renderFamiliaTotais(); calcular();
+      }
+      // Atalho: cria despesa essencial já vinculada ao primeiro pet
+      function addEssencialPet() {
+        if (!(state.pets || []).length) { showToast('Cadastre um pet primeiro na aba Pets', 'yellow'); return; }
+        const hoje = new Date();
+        const comp = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+        const pet = state.pets[0];
+        state.essenciais.push({ id: uid('e'), nome: 'Gasto com ' + pet.nome, valor: 0, dia: 10, membro: state.membros[0]?.id || 'm1', cat: 'pet', fixo: true, pago: false, competencia: comp, pet: pet.id });
+        renderEssenciais(); calcular();
+      }
+
+      function petCatRows(cats) {
+        return Object.entries(cats).map(([cat, val]) =>
+          `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--b0)">
+            <span style="color:var(--muted)">${CAT_LABEL[cat] || cat}</span>
+            <span style="color:var(--text);font-weight:500">${fmt(val)}</span>
+          </div>`
+        ).join('');
+      }
+      function petFixoVar(c) {
+        return `<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px">
+          <span>Fixos: <b style="color:var(--text)">${fmt(c.fixo)}</b></span>
+          <span>Variáveis: <b style="color:var(--text)">${fmt(c.variavel)}</b></span>
+        </div>`;
+      }
+
+      // ── Página Pets (cadastro) ──
+      function renderPets() {
+        const el = document.getElementById('lista-pets');
+        if (!el) return;
+        const pets = state.pets || [];
+        if (!pets.length) {
+          el.innerHTML = '<div class="hbox hbox-blue" style="margin-bottom:1rem">Nenhum pet cadastrado ainda. Clique em "+ Adicionar pet" para começar.</div>';
+        } else {
+          const inpStyle = 'width:100%;padding:6px 8px;background:var(--s1);border:1px solid var(--b1);border-radius:6px;color:var(--text);font-size:13px';
+          el.innerHTML = pets.map((p, i) => {
+            const ci = i % AVATAR_BG.length;
+            const c = getCustoPet(p.id);
+            const espOpts = Object.keys(PET_ESPECIE_LABEL).map(k =>
+              `<option value="${k}" ${p.especie === k ? 'selected' : ''}>${PET_ICONE[k]} ${PET_ESPECIE_LABEL[k]}</option>`
+            ).join('');
+            return `<div class="item-card" id="card-pet-${p.id}">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                <div style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;background:${AVATAR_BG[ci]};flex-shrink:0">${PET_ICONE[p.especie] || '🐾'}</div>
+                <div style="flex:1">
+                  <input type="text" value="${esc(p.nome)}" placeholder="Nome do pet"
+                    onchange="atualizarPet('${p.id}','nome',this.value)"
+                    style="width:100%;background:var(--s3);border:1px solid var(--b1);border-radius:8px;padding:7px 10px;color:var(--text);font-size:15px;font-weight:600;font-family:var(--ff);outline:none;transition:border-color .15s"
+                    onfocus="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--b1)'">
+                </div>
+                <button class="rm-btn" onclick="removePet('${p.id}')">remover</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px">
+                <div class="ifield"><label>Espécie</label><select onchange="atualizarPet('${p.id}','especie',this.value)">${espOpts}</select></div>
+                <div class="ifield"><label>Raça</label><input type="text" value="${esc(p.raca || '')}" placeholder="Ex.: Golden Retriever" onchange="atualizarPet('${p.id}','raca',this.value)" style="${inpStyle}"></div>
+                <div class="ifield"><label>Idade (anos)</label><input type="number" value="${p.idade || 0}" min="0" max="40" onchange="atualizarPet('${p.id}','idade',+this.value)" style="${inpStyle}"></div>
+              </div>
+              <div style="background:var(--s3);border-radius:8px;padding:10px 12px">
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Gastos vinculados</div>
+                ${petCatRows(c.cats) || '<div style="font-size:12px;color:var(--dim)">Nenhum gasto vinculado a este pet ainda.</div>'}
+                ${c.qtd ? petFixoVar(c) : ''}
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--b1)">
+                  <span style="font-size:13px;color:var(--muted)">Total mensal</span>
+                  <span style="font-family:var(--ff);font-size:18px;font-weight:700;color:var(--orange)">${fmt(c.total)}</span>
+                </div>
+              </div>
+              <div style="font-size:11px;color:var(--muted);margin-top:8px">
+                💡 Para lançar gastos com ${esc(p.nome)}, vá em <a href="essenciais.html" style="color:var(--acc)">Essenciais</a> e escolha o pet na despesa.
+              </div>
+            </div>`;
+          }).join('');
+        }
+        renderPetsResumo();
+      }
+
+      function renderPetsResumo() {
+        const el = document.getElementById('pets-resumo');
+        if (!el) return;
+        const pets = state.pets || [];
+        if (!pets.length) { el.innerHTML = '<div class="hbox hbox-blue">Sem pets cadastrados.</div>'; return; }
+        const cs = pets.map(p => getCustoPet(p.id));
+        const tot = cs.reduce((s, c) => s + c.total, 0);
+        const fixo = cs.reduce((s, c) => s + c.fixo, 0);
+        const ess = getTotEss();
+        const pct = ess > 0 ? Math.round(tot / ess * 100) : 0;
+        el.innerHTML = `
+          <div class="card-row"><label>Fixos</label><span>${fmt(fixo)}</span></div>
+          <div class="card-row"><label>Variáveis</label><span>${fmt(tot - fixo)}</span></div>
+          <div class="card-row"><label>Peso nas despesas essenciais</label><span>${pct}%</span></div>
+          <div class="card-row" style="border-top:1px solid var(--b2);padding-top:10px;margin-top:4px">
+            <label style="font-weight:600;color:var(--text)">Total pets/mês</label>
+            <span style="color:var(--orange);font-weight:700;font-size:16px;font-family:var(--ff)">${fmt(tot)}</span>
+          </div>`;
+      }
+
+      // ── Página Família: quanto cada pet gasta ──
+      function renderFamiliaPets() {
+        const el = document.getElementById('familia-pets');
+        if (!el) return;
+        const pets = state.pets || [];
+        if (!pets.length) {
+          el.innerHTML = '<div class="hbox hbox-blue">Nenhum pet cadastrado. <a href="pets.html" style="color:var(--acc)">Cadastrar pet</a></div>';
+          return;
+        }
+        const totGeral = getTotFamilia();
+        el.innerHTML = pets.map(p => {
+          const c = getCustoPet(p.id);
+          const pct = totGeral > 0 ? clamp(c.total / totGeral * 100, 0, 100) : 0;
+          const sub = [PET_ESPECIE_LABEL[p.especie] || '', p.raca || ''].filter(Boolean).join(' · ');
+          return `<div style="background:var(--s3);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px">
+              <div style="min-width:0">
+                <div style="font-size:14px;font-weight:600;color:var(--text)">${PET_ICONE[p.especie] || '🐾'} ${esc(p.nome)}</div>
+                <div style="font-size:11px;color:var(--muted)">${esc(sub)}</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-family:var(--ff);font-size:18px;font-weight:700;color:var(--orange)">${fmt(c.total)}</div>
+                <div style="font-size:10px;color:var(--muted)">${Math.round(pct)}% da família</div>
+              </div>
+            </div>
+            <div class="prog" style="margin-bottom:6px"><div class="prog-fill" style="width:${pct}%;background:var(--orange)"></div></div>
+            ${petCatRows(c.cats) || '<div style="font-size:12px;color:var(--dim)">Nenhum gasto vinculado.</div>'}
+            ${c.qtd ? petFixoVar(c) : ''}
+          </div>`;
+        }).join('');
+      }
+
+      // Página Família completa (também corrige o renderFamilia() que o auth.js já chamava mas não existia)
+      function renderFamilia() { renderMembros(); renderFamiliaPets(); }
+
+      // Injeta o botão "Pets" no menu lateral de qualquer página (logo após "Família")
+      function injectPetsNav() {
+        const navEl = document.getElementById('sidebar');
+        if (!navEl || navEl.querySelector('[data-nav-pets]')) return;
+        const fam = [...navEl.querySelectorAll('.nav-btn')].find(b => (b.getAttribute('onclick') || '').includes('familia'));
+        if (!fam) return;
+        const b = document.createElement('button');
+        b.className = 'nav-btn' + (/pets\.html$/.test(location.pathname) ? ' active' : '');
+        b.setAttribute('data-nav-pets', '1');
+        b.setAttribute('onclick', "location.href='pets.html'");
+        b.innerHTML = '<span class="nav-icon">🐾</span>Pets';
+        fam.insertAdjacentElement('afterend', b);
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectPetsNav);
+      else injectPetsNav();
+
+      // Garante a categoria "pet" mesmo que o app_config do banco ainda não tenha
+      function ensurePetCat() {
+        if (!window.CFG) return;
+        if (Array.isArray(CFG.cats_ess) && !CFG.cats_ess.includes('pet')) CFG.cats_ess = [...CFG.cats_ess, 'pet'];
+        if (CFG.cat_label && !CFG.cat_label.pet) CFG.cat_label = { ...CFG.cat_label, pet: 'Pets' };
       }
 
       // membrosOptions for selects
@@ -517,6 +748,7 @@
           ${e.pago ? 'Pago' : 'Marcar pago'}
         </label>
         <input class="item-name-inp" value="${esc(e.nome)}" onchange="state.essenciais[${i}].nome=this.value;calcular()">
+        ${temPet(e) ? `<span class="badge b-blue">🐾 ${esc(petNome(e.pet))}</span>` : ''}
         <span class="badge ${e.fixo ? 'b-blue' : 'b-yellow'}">${e.fixo ? 'Fixo' : 'Variável'}</span>
         <div class="venc-dot ${getDotClass(e.dia)}"></div>
         <button class="rm-btn" onclick="removeEssencial('${e.id}')">remover</button>
@@ -525,7 +757,8 @@
         <div class="ifield"><label>Valor (R$)</label><input type="number" value="${e.valor}" oninput="state.essenciais[${i}].valor=+this.value;calcular()"></div>
         <div class="ifield"><label>Vencimento (dia)</label><input type="number" value="${e.dia}" min="1" max="31" oninput="state.essenciais[${i}].dia=+this.value;calcular()"></div>
         <div class="ifield"><label>Competência</label><input type="month" value="${e.competencia||''}" oninput="state.essenciais[${i}].competencia=this.value" style="color-scheme:dark"></div>
-        <div class="ifield"><label>Membro</label><select onchange="state.essenciais[${i}].membro=this.value;renderMembros();renderFamiliaTotais()">${membrosOptions(e.membro)}</select></div>
+        <div class="ifield"><label>Membro</label><select ${temPet(e) ? 'disabled title="Gasto de pet não conta no membro"' : ''} onchange="state.essenciais[${i}].membro=this.value;renderMembros();renderFamiliaTotais()">${membrosOptions(e.membro)}</select></div>
+        ${(state.pets || []).length ? `<div class="ifield"><label>🐾 Pet</label><select onchange="setPetEssencial('${e.id}',this.value)">${petsOptions(temPet(e) ? e.pet : '')}</select></div>` : ''}
         <div class="ifield"><label>Categoria</label>
           <select onchange="state.essenciais[${i}].cat=this.value;calcular()">
             ${CATS_ESS.map(c => `<option value="${c}" ${e.cat === c ? 'selected' : ''}>${CAT_LABEL[c] || c}</option>`).join('')}
@@ -2831,6 +3064,7 @@
 
       function initApp() {
         renderMembros();
+        renderPets();
         renderRendas();
         renderEssenciais();
         renderNE();
